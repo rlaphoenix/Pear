@@ -1,0 +1,59 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Pear",
+  "version": "1.0.0",
+  "identifier": "com.rlaphoenix.pear",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:1420",
+    "beforeDevCommand": "npm run dev:ui",
+    "beforeBuildCommand": "npm run build:ui"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Pear",
+        "width": 1620,
+        "height": 960,
+        "minWidth": 1040,
+        "minHeight": 720,
+        "theme": "Dark",
+        "decorations": false,
+        "visible": false
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "plugins": {
+    "updater": {
+      "endpoints": [
+        "https://github.com/rlaphoenix/pear/releases/latest/download/latest.json"
+      ],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEIxMDRCNDZCMTdBM0I3MUEKUldRYXQ2TVhhN1FFc1U1YWZqNnhnaGhpanU5NlVNbGcvZnhkdTYvSTZmWU9nNXFlMzB5TW5oK1AK"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis"],
+    "createUpdaterArtifacts": true,
+    "resources": {
+      "../README.md": "README.md"
+    },
+    "fileAssociations": [
+      {
+        "ext": ["pcp"],
+        "name": "Pear Project",
+        "description": "Pear comparison project",
+        "role": "Editor"
+      }
+    ],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.ico"
+    ]
+  }
+}

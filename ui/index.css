@@ -1,0 +1,177 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --background: #08080a;
+  --foreground: #ececf1;
+
+  --card: #101013;
+  --card-foreground: #ececf1;
+
+  --popover: #131317;
+  --popover-foreground: #ececf1;
+
+  --panel: #0c0c0f;
+
+  --primary: #6366f1;
+  --primary-foreground: #ffffff;
+
+  --secondary: #17171c;
+  --secondary-foreground: #e4e4e7;
+
+  --muted: #16161a;
+  --muted-foreground: #8b8b96;
+
+  --accent: #1c1c22;
+  --accent-foreground: #f4f4f5;
+
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+
+  --border: #232329;
+  --input: #26262d;
+  --ring: #6366f1;
+
+  --radius: 0px;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-panel: var(--panel);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+
+  --ease-smooth: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+  html,
+  body,
+  #root {
+    height: 100%;
+    margin: 0;
+  }
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+      Roboto, sans-serif;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+    user-select: none;
+  }
+
+  button,
+  input,
+  select,
+  a,
+  [role="button"],
+  [data-slot] {
+    transition-property: color, background-color, border-color, box-shadow,
+      opacity, transform, filter;
+    transition-duration: 180ms;
+    transition-timing-function: var(--ease-smooth);
+  }
+
+  button:not(:disabled),
+  a[href],
+  label[for],
+  summary,
+  [role="button"]:not([aria-disabled="true"]) {
+    cursor: pointer;
+  }
+  button:disabled,
+  [aria-disabled="true"] {
+    cursor: not-allowed;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--border);
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #34343c;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.animate-fade-in {
+  animation: fade-in 0.28s var(--ease-smooth) both;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(16px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+.animate-toast-in {
+  animation: toast-in 0.32s var(--ease-smooth) both;
+}
+.animate-pop-in {
+  animation: pop-in 0.2s var(--ease-smooth) both;
+}
+
+.checkerboard {
+  background-image: linear-gradient(45deg, #131316 25%, transparent 25%),
+    linear-gradient(-45deg, #131316 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #131316 75%),
+    linear-gradient(-45deg, transparent 75%, #131316 75%);
+  background-size: 22px 22px;
+  background-position: 0 0, 0 11px, 11px -11px, -11px 0px;
+  background-color: #0b0b0d;
+}

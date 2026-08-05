@@ -1,0 +1,64 @@
+name: CD
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: app
+      - name: Install frontend dependencies
+        run: npm ci
+      - name: Assemble vendored runtime bundle
+        run: npm run vendor
+      - name: Build and release
+        id: tauri
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          projectPath: .
+          tauriScript: npm run tauri
+          args: --config app/tauri.bundle.conf.json
+          tagName: ${{ github.ref_name }}
+          releaseName: ${{ github.ref_name }}
+          releaseDraft: true
+          prerelease: false
+      - name: Build portable exe (unbundled)
+        run: npm run tauri -- build --no-bundle
+      - name: Attach portable exe to the release
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const version = '${{ github.ref_name }}';
+            await github.rest.repos.uploadReleaseAsset({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: ${{ steps.tauri.outputs.releaseId }},
+              name: `Pear_${version}_x64-portable.exe`,
+              data: fs.readFileSync('app/target/release/pear.exe'),
+            });

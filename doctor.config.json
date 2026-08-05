@@ -1,0 +1,5 @@
+{
+  "ignore": {
+    "files": ["app/target/**", "app/vendor/**"]
+  }
+}

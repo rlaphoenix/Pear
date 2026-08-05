@@ -1,0 +1,45 @@
+[package]
+name = "pear"
+version = "1.0.0"
+description = "Pear - the PEARfect compare tool"
+authors = ["pear"]
+edition = "2021"
+
+[lib]
+name = "pear_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["devtools"] }
+tauri-plugin-dialog = "2"
+tauri-plugin-single-instance = "2"
+tauri-plugin-window-state = "2"
+tauri-plugin-updater = "2"
+tauri-plugin-process = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order"] }
+image = "0.25"
+imageproc = "0.25"
+ab_glyph = "0.2"
+rand = "0.8"
+base64 = "0.22"
+sha2 = "0.10"
+chrono = { version = "0.4", default-features = false, features = ["clock"] }
+indexmap = { version = "2", features = ["serde"] }
+opener = "0.7"
+zip = { version = "4", default-features = false, features = ["zstd"] }
+vapoursynth = { version = "0.5", default-features = false }
+
+[target.'cfg(windows)'.dependencies]
+webview2-com = "0.38"
+windows = { version = "0.61", features = ["Win32_Foundation", "Win32_System_Console"] }
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = true
