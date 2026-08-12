@@ -919,15 +919,26 @@ fn matrix_label(matrix: &str) -> String {
     .to_string()
 }
 
-fn tonemap_note(tm: &vapoursynth::Tonemap) -> Option<String> {
+fn dv_label(profile: Option<u8>, bl_compat: Option<u8>) -> Option<String> {
+    let p = profile?;
+    Some(match bl_compat {
+        Some(bl) if bl > 0 => format!("{p}.{bl}"),
+        _ => format!("{p}"),
+    })
+}
+
+fn tonemap_note(tm: &vapoursynth::Tonemap, info: &SourceInfo) -> Option<String> {
     if !tm.on {
         return None;
     }
     let range = match tm.src_csp.as_str() {
-        "hdr10" => "HDR10",
-        "hdr10plus" => "HDR10+",
-        "hlg" => "HLG",
-        "dovi" => "Dolby Vision",
+        "hdr10" => "HDR10".to_string(),
+        "hdr10plus" => "HDR10+".to_string(),
+        "hlg" => "HLG".to_string(),
+        "dovi" => match dv_label(info.dv_profile, info.dv_bl_compat) {
+            Some(l) => format!("Dolby Vision {l}"),
+            None => "Dolby Vision".to_string(),
+        },
         _ => return None,
     };
     let mut opts: Vec<String> = Vec::new();
@@ -1140,7 +1151,7 @@ fn composite_frames(
                 if let Some(l) = scale_label(params, disp_dims[s], target) {
                     lines.push(l);
                 }
-                if let Some(l) = tonemap_note(&src.tonemap(info)) {
+                if let Some(l) = tonemap_note(&src.tonemap(info), info) {
                     lines.push(l);
                 }
                 pipeline::draw_info_box(&mut img, &lines, font, info_ox, info_oy, info_pos, info_mult);
