@@ -1,3 +1,4 @@
+use dolby_vision::rpu::dovi_rpu::DoviRpu;
 use image::RgbaImage;
 use std::collections::HashMap;
 use std::ffi::CStr;
@@ -871,38 +872,15 @@ pub fn resolution_matrix_int(width: u32) -> &'static str {
 }
 
 fn dv_from_rpu(rpu: &[u8]) -> (Option<u8>, Option<u8>) {
-    struct Bits<'a> {
-        b: &'a [u8],
-        pos: usize,
-    }
-    impl Bits<'_> {
-        fn u(&mut self, n: u32) -> u64 {
-            let mut v = 0u64;
-            for _ in 0..n {
-                let byte = *self.b.get(self.pos >> 3).unwrap_or(&0);
-                let bit = (byte >> (7 - (self.pos & 7))) & 1;
-                v = (v << 1) | bit as u64;
-                self.pos += 1;
-            }
-            v
-        }
-    }
-    if rpu.len() < 4 {
+    let Ok(parsed) = DoviRpu::parse_unspec62_nalu(rpu) else {
         return (None, None);
-    }
-    let mut r = Bits { b: rpu, pos: 0 };
-    let _rpu_nal_prefix = r.u(8);
-    let rpu_type = r.u(6);
-    let _rpu_format = r.u(11);
-    if rpu_type != 2 {
-        return (None, None);
-    }
-    let vdr_rpu_profile = r.u(4);
-    match vdr_rpu_profile {
-        0 => (Some(5), Some(0)),
-        1 => (Some(8), Some(1)),
-        _ => (None, None),
-    }
+    };
+    let bl_compat = match parsed.dovi_profile {
+        5 => Some(0),
+        8 => Some(1),
+        _ => None,
+    };
+    (Some(parsed.dovi_profile), bl_compat)
 }
 
 pub struct FetchReq {
