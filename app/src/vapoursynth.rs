@@ -781,10 +781,11 @@ pub fn probe_metadata(path: &str) -> Result<SourceMeta, String> {
 
     let has_dv = props.get_data("DolbyVisionRPU").is_ok();
     let hdr10plus = props.get_data("HDR10Plus").is_ok();
-    let (dv_profile, dv_bl_compat) = match props.get_data("DolbyVisionRPU") {
-        Ok(rpu) => dv_from_rpu(rpu),
-        Err(_) => (None, None),
+    let dv_profile = match props.get_data("DolbyVisionRPU") {
+        Ok(rpu) => dv_profile_from_rpu(rpu),
+        Err(_) => None,
     };
+    let dv_bl_compat = dv_bl_compat_id(dv_profile, &transfer);
     let hdr = hdr_format(&transfer, hdr10plus, has_dv).to_string();
 
     Ok(SourceMeta {
@@ -871,16 +872,19 @@ pub fn resolution_matrix_int(width: u32) -> &'static str {
     if width > 1024 { "1" } else { "5" }
 }
 
-fn dv_from_rpu(rpu: &[u8]) -> (Option<u8>, Option<u8>) {
-    let Ok(parsed) = DoviRpu::parse_unspec62_nalu(rpu) else {
-        return (None, None);
-    };
-    let bl_compat = match parsed.dovi_profile {
-        5 => Some(0),
-        8 => Some(1),
-        _ => None,
-    };
-    (Some(parsed.dovi_profile), bl_compat)
+fn dv_profile_from_rpu(rpu: &[u8]) -> Option<u8> {
+    DoviRpu::parse_unspec62_nalu(rpu).ok().map(|p| p.dovi_profile)
+}
+
+fn dv_bl_compat_id(profile: Option<u8>, transfer: &str) -> Option<u8> {
+    match profile? {
+        8 => Some(match transfer {
+            "st2084" => 1,
+            "std-b67" => 4,
+            _ => 2,
+        }),
+        _ => Some(0),
+    }
 }
 
 pub struct FetchReq {
