@@ -146,7 +146,7 @@ This allows you to preview your Sources in various comparison modes. This should
 try and get the temporal sync aligned with all sources. It allows you to seek through your
 video and make sure the frames line up.
 
-You can zoom, pan, scrub, seek by frame, second, or keyframe. You can copy the shown frame,
+You can zoom, pan, scrub, seek by frame, segment, or keyframe. You can copy the shown frame,
 go fullscreen (in different ways).
 
 The zoom % amount listed on the top right shows you the relative scale of the shown image.
@@ -189,7 +189,7 @@ It contains the following components:
 - Play/Pause: To enable playback of the project preview (note: its slow, film-strip will lag)
 - Playhead: Lists the current project playback timestamp and frame number.
 - Seekbar: Allows you to drag or click to seek across the project.
-- Buttons: These let you seek back or forward by 1 frame, 1 second, or 1 keyframe.
+- Buttons: These let you seek back or forward by 1 frame, 1 segment, or 1 keyframe.
 
 ### Export
 

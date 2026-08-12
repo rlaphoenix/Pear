@@ -59,7 +59,7 @@ export const PreviewTab = forwardRef<PreviewTabHandle, Props>(function PreviewTa
     bands,
   );
 
-  const { jumpKeyframe } = usePreviewKeyboard({
+  const { jumpKeyframe, jumpSegment } = usePreviewKeyboard({
     keyframes,
     shownSource,
     base,
@@ -124,6 +124,8 @@ export const PreviewTab = forwardRef<PreviewTabHandle, Props>(function PreviewTa
           maxBase={maxBase}
           onJumpKeyframe={jumpKeyframe}
           canKeyframe={keyframes.length > 0}
+          onJumpSegment={jumpSegment}
+          canSegment={(shownSource?.segments?.length ?? 0) > 0}
           playing={playing}
           onTogglePlay={togglePlay}
           tracks={sources.map((s, i) => ({

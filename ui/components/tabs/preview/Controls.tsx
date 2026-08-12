@@ -81,6 +81,8 @@ interface Props {
   tracks: SeekTrack[];
   onJumpKeyframe?: (dir: 1 | -1) => void;
   canKeyframe?: boolean;
+  onJumpSegment?: (dir: 1 | -1) => void;
+  canSegment?: boolean;
   playing?: boolean;
   onTogglePlay?: () => void;
 }
@@ -92,6 +94,8 @@ export function Controls({
   tracks,
   onJumpKeyframe,
   canKeyframe,
+  onJumpSegment,
+  canSegment,
   playing = false,
   onTogglePlay,
 }: Props) {
@@ -100,7 +104,6 @@ export function Controls({
   const seeking = useRef(false);
   const enabled = maxBase > 0;
 
-  const secondFrames = Math.max(1, Math.round(clockFps));
   const step = (delta: number) => setBase(clampNum(base + delta, 0, maxBase));
 
   const nFromX = (clientX: number, rect: DOMRect) =>
@@ -196,17 +199,17 @@ export function Controls({
         )}
         {navBtn(
           <ChevronsLeft className="size-3.5" />,
-          "Back 1 second",
-          () => step(-secondFrames),
-          !enabled,
+          "Previous segment",
+          () => onJumpSegment?.(-1),
+          !canSegment,
         )}
         {navBtn(<ChevronLeft className="size-3.5" />, "Back 1 frame", () => step(-1), !enabled)}
         {navBtn(<ChevronRight className="size-3.5" />, "Forward 1 frame", () => step(1), !enabled)}
         {navBtn(
           <ChevronsRight className="size-3.5" />,
-          "Forward 1 second",
-          () => step(secondFrames),
-          !enabled,
+          "Next segment",
+          () => onJumpSegment?.(1),
+          !canSegment,
         )}
         {navBtn(
           <SkipForward className="size-3.5" />,

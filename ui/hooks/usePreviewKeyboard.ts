@@ -1,5 +1,5 @@
 import { useCallback, useEffect, type Dispatch, type SetStateAction } from "react";
-import { frameAt, projectFrameOf } from "@/lib/frames";
+import { projectFrameOf } from "@/lib/frames";
 import type { UiSource } from "@/state/AppState";
 
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
@@ -23,45 +23,53 @@ export function usePreviewKeyboard({
   active,
   togglePlay,
 }: KeyboardArgs) {
-  const jumpKeyframe = useCallback(
-    (dir: 1 | -1) => {
-      if (!keyframes.length) return;
-      const segs = shownSource?.segments ?? [];
-      const cur = frameAt(segs, base);
-      if (cur == null) return;
-      let target: number | undefined;
-      if (dir > 0) target = keyframes.find((k) => k > cur);
-      else {
-        const prev = keyframes.filter((k) => k < cur);
-        target = prev.length ? prev[prev.length - 1] : undefined;
-      }
-      if (target == null) return;
-      const t = projectFrameOf(segs, target);
-      if (t == null) return;
-      setBase(clamp(t, 0, maxBase));
-    },
-    [keyframes, base, shownSource, maxBase, setBase],
-  );
-
-  const jumpSegment = useCallback(
-    (dir: 1 | -1) => {
-      const segs = shownSource?.segments ?? [];
-      if (!segs.length) return;
-      const bounds = new Set<number>();
-      let lastFrame = 0;
-      for (const s of segs) {
-        bounds.add(clamp(s.pos, 0, maxBase));
-        lastFrame = Math.max(lastFrame, s.pos + s.len - 1);
-      }
-      bounds.add(clamp(lastFrame, 0, maxBase));
-      const sorted = [...bounds].sort((a, b) => a - b);
+  const seekTo = useCallback(
+    (targets: Iterable<number>, dir: 1 | -1) => {
+      const sorted = [...new Set(targets)].sort((a, b) => a - b);
       const target =
         dir > 0
           ? sorted.find((b) => b > base)
           : [...sorted].reverse().find((b) => b < base);
       if (target != null) setBase(target);
     },
-    [shownSource, base, maxBase, setBase],
+    [base, setBase],
+  );
+
+  const jumpKeyframe = useCallback(
+    (dir: 1 | -1) => {
+      if (!keyframes.length) return;
+      const segs = shownSource?.segments ?? [];
+      if (!segs.length) return;
+      let first = maxBase;
+      let last = 0;
+      for (const s of segs) {
+        first = Math.min(first, clamp(s.pos, 0, maxBase));
+        last = Math.max(last, clamp(s.pos + s.len - 1, 0, maxBase));
+      }
+      const targets = [first, last];
+      for (const k of keyframes) {
+        const t = projectFrameOf(segs, k);
+        if (t != null) targets.push(clamp(t, 0, maxBase));
+      }
+      seekTo(targets, dir);
+    },
+    [keyframes, shownSource, maxBase, seekTo],
+  );
+
+  const jumpSegment = useCallback(
+    (dir: 1 | -1) => {
+      const segs = shownSource?.segments ?? [];
+      if (!segs.length) return;
+      const targets: number[] = [];
+      let last = 0;
+      for (const s of segs) {
+        targets.push(clamp(s.pos, 0, maxBase));
+        last = Math.max(last, s.pos + s.len - 1);
+      }
+      targets.push(clamp(last, 0, maxBase));
+      seekTo(targets, dir);
+    },
+    [shownSource, maxBase, seekTo],
   );
 
   useEffect(() => {
@@ -99,5 +107,5 @@ export function usePreviewKeyboard({
     return () => window.removeEventListener("keydown", onKey);
   }, [active, maxBase, jumpKeyframe, jumpSegment, togglePlay, setBase]);
 
-  return { jumpKeyframe };
+  return { jumpKeyframe, jumpSegment };
 }
