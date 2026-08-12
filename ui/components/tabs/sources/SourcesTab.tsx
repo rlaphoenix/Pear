@@ -137,7 +137,7 @@ export function SourcesTab() {
           )}
         >
           <Maximize2 className="size-3.5" />
-          Resolution
+          Spatial alignment
         </button>
       </nav>
 
