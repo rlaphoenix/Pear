@@ -34,6 +34,13 @@ export function DynamicRangeField({ source }: { source: UiSource }) {
     stored && stored !== "auto" ? (stored as TonemapSrc) : (detectedHdr as TonemapSrc);
   const isDovi = resolvedSrc === "dovi";
   const dvProfile = source.info?.dvProfile ?? null;
+  const dvBlCompat = source.info?.dvBlCompat ?? null;
+  const dvLabel =
+    dvProfile == null
+      ? null
+      : dvBlCompat != null && dvBlCompat > 0
+        ? `${dvProfile}.${dvBlCompat}`
+        : `${dvProfile}`;
 
   return (
     <div className="flex flex-col gap-2">
@@ -108,7 +115,7 @@ export function DynamicRangeField({ source }: { source: UiSource }) {
           )}
           {isDovi && (
             <p className="text-[10px] leading-relaxed text-muted-foreground/60">
-              {dvProfile != null ? `Dolby Vision profile ${dvProfile} detected. ` : ""}
+              {dvLabel != null ? `Dolby Vision profile ${dvLabel} detected. ` : ""}
               RPU handling depends on the decoder passing it through: profile 8.1/8.4
               map best, profile 5 is best-effort, and profile 7 uses the base layer
               only (no enhancement layer).
