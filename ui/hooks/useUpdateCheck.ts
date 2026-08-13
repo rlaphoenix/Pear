@@ -99,7 +99,7 @@ export function useUpdateCheck(enabled: boolean) {
           version: found.version,
           currentVersion: found.currentVersion,
           url: `https://github.com/${REPO}/releases/tag/v${found.version}`,
-          downloadUrl: `https://github.com/${REPO}/releases/download/v${found.version}/Pear_v${found.version}_x64-portable.exe`,
+          downloadUrl: `https://github.com/${REPO}/releases/download/v${found.version}/Pear_${found.version}_x64-portable.exe`,
         });
         setUpdateState("available");
         setUpdateModalOpen(true);
