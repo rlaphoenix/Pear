@@ -1,6 +1,6 @@
 use crate::config::Crop;
 use crate::vapoursynth::Fit;
-use ab_glyph::{FontVec, PxScale};
+use ab_glyph::{Font, FontVec, PxScale, ScaleFont};
 use image::imageops::FilterType;
 use image::{Rgba, RgbaImage};
 
@@ -275,7 +275,9 @@ pub fn draw_watermark(
         h as i32 - oy - pad - th
     };
 
-    let mut layer = RgbaImage::from_pixel(tw as u32, th as u32, Rgba([0, 0, 0, 0]));
+    let sfont = font.as_scaled(scale);
+    let line_h = (sfont.ascent() - sfont.descent()).ceil().max(th as f32) as u32 + 1;
+    let mut layer = RgbaImage::from_pixel(tw as u32, line_h, Rgba([0, 0, 0, 0]));
     imageproc::drawing::draw_text_mut(&mut layer, Rgba([255, 255, 255, 255]), 0, 0, scale, font, text);
     composite_layer(img, &layer, x0, y0, WATERMARK_OPACITY, true);
 
