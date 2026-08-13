@@ -148,6 +148,7 @@ export default function App() {
     projectName,
     readySources,
     closeProject,
+    setFullscreen,
     saveProject,
     prefsReady,
     saveUiState,

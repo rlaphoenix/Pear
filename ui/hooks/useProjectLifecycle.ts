@@ -24,6 +24,7 @@ type Options = {
   projectName: string;
   readySources: UiSource[];
   closeProject: () => Promise<void> | void;
+  setFullscreen: Dispatch<SetStateAction<boolean>>;
   saveProject: (path: string, name: string, thumbnail?: string) => Promise<unknown>;
   prefsReady: boolean;
   saveUiState: (tab: string, previewMode: string, base: number) => void;
@@ -42,6 +43,7 @@ export function useProjectLifecycle({
   projectName,
   readySources,
   closeProject,
+  setFullscreen,
   saveProject,
   prefsReady,
   saveUiState,
@@ -63,7 +65,8 @@ export function useProjectLifecycle({
   const onCloseProject = useCallback(() => {
     void closeProject();
     setScripts({});
-  }, [closeProject, setScripts]);
+    setFullscreen(false);
+  }, [closeProject, setScripts, setFullscreen]);
 
   const requestCloseProject = useCallback(() => {
     if (dirty) setConfirmClose(true);
