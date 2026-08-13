@@ -443,6 +443,7 @@ export interface Prefs {
   previewBorder: PreviewBorder | null;
   hwdevice: string;
   hwfallback: boolean;
+  checkForUpdates: boolean;
   lastTab: string;
   previewMode: string;
   seekBase: number;
@@ -469,6 +470,7 @@ export interface AppSettings {
   previewBorder: PreviewBorder;
   hwdevice: HwDevice;
   hwfallback: boolean;
+  checkForUpdates: boolean;
 }
 
 export interface ProbedSource {
@@ -578,6 +580,7 @@ export const saveSettings = (s: AppSettings) =>
     previewBorder: s.previewBorder,
     hwdevice: s.hwdevice,
     hwfallback: s.hwfallback,
+    checkForUpdates: s.checkForUpdates,
   });
 
 export const setHwdevice = (device: HwDevice) => invoke<void>("set_hwdevice", { device });

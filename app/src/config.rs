@@ -367,6 +367,8 @@ pub struct Prefs {
     pub hwdevice: String,
     #[serde(default = "default_true")]
     pub hwfallback: bool,
+    #[serde(default = "default_true")]
+    pub check_for_updates: bool,
     #[serde(default = "default_last_tab")]
     pub last_tab: String,
     #[serde(default = "default_preview_mode")]
@@ -400,6 +402,7 @@ impl Default for Prefs {
             preview_border: serde_json::Value::Null,
             hwdevice: String::new(),
             hwfallback: true,
+            check_for_updates: true,
             last_tab: default_last_tab(),
             preview_mode: default_preview_mode(),
             seek_base: 0,

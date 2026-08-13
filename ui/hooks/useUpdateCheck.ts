@@ -28,23 +28,41 @@ function isNewer(a: string, b: string): boolean {
   return false;
 }
 
-export function useUpdateCheck() {
+export function useUpdateCheck(enabled: boolean) {
   const [updateState, setUpdateState] = useState<UpdateState>("hidden");
   const [update, setUpdate] = useState<UpdateInfo | null>(null);
   const [updateModalOpen, setUpdateModalOpen] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [portable, setPortable] = useState(false);
   const handleRef = useRef<Update | null>(null);
+  const didCheck = useRef(false);
 
   useEffect(() => {
     isPortable().then(setPortable).catch(() => {});
   }, []);
 
   useEffect(() => {
+    if (!enabled) {
+      didCheck.current = false;
+      if (handleRef.current) {
+        void handleRef.current.close().catch(() => {});
+        handleRef.current = null;
+      }
+      setUpdateState("hidden");
+      setUpdateModalOpen(false);
+      return;
+    }
+    if (didCheck.current) return;
+    didCheck.current = true;
+    let cancelled = false;
     setUpdateState("checking");
     void (async () => {
       try {
         const found = await check();
+        if (cancelled) {
+          if (found) await found.close().catch(() => {});
+          return;
+        }
         if (!found) {
           setUpdateState("hidden");
           return;
@@ -56,7 +74,7 @@ export function useUpdateCheck() {
         }
         if (ignored !== "" && !isNewer(found.version, ignored)) {
           await found.close().catch(() => {});
-          setUpdateState("hidden");
+          if (!cancelled) setUpdateState("hidden");
           return;
         }
         handleRef.current = found;
@@ -68,11 +86,14 @@ export function useUpdateCheck() {
         setUpdateState("available");
         setUpdateModalOpen(true);
       } catch {
-        setUpdateState("hidden");
+        if (!cancelled) setUpdateState("hidden");
       }
     })();
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [enabled]);
 
   const install = useCallback(
     async (onProgress?: (fraction: number | null) => void): Promise<void> => {

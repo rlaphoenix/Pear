@@ -1573,6 +1573,7 @@ pub fn save_settings(
     preview_border: serde_json::Value,
     hwdevice: String,
     hwfallback: bool,
+    check_for_updates: bool,
 ) -> Result<(), String> {
     let dir = config_dir(&app)?;
     let mut prefs = config::load_prefs(&dir);
@@ -1594,6 +1595,7 @@ pub fn save_settings(
     prefs.preview_border = preview_border;
     prefs.hwdevice = hwdevice;
     prefs.hwfallback = hwfallback;
+    prefs.check_for_updates = check_for_updates;
     config::save_prefs(&dir, &prefs)
 }
 

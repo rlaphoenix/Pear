@@ -138,7 +138,7 @@ export default function App() {
 
   const markup = useMarkup(currentPos);
   const resize = useComparisonsResize();
-  const update = useUpdateCheck();
+  const update = useUpdateCheck(prefsReady && appSettings.checkForUpdates);
 
   const projectOpen = useProjectOpen({ readProject, applyProject });
   const lifecycle = useProjectLifecycle({

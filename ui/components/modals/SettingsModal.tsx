@@ -9,6 +9,7 @@ import { PreviewerSection } from "@/components/settings/PreviewerSection";
 import { FullscreenSection } from "@/components/settings/FullscreenSection";
 import { INCLUDES } from "@/hooks/useFullscreen";
 import { InfoBoxSection } from "@/components/settings/InfoBoxSection";
+import { GeneralSection } from "@/components/settings/GeneralSection";
 
 interface Props {
   settings: AppSettings;
@@ -22,6 +23,7 @@ export interface SectionProps {
 }
 
 const SECTIONS = [
+  { id: "general", label: "General" },
   { id: "decoding", label: "Decoding" },
   { id: "export", label: "Export" },
   { id: "scaling", label: "Scaling" },
@@ -49,6 +51,7 @@ export function SettingsModal({ settings, onSave, onClose }: Props) {
     draft.watermark !== settings.watermark ||
     draft.hwdevice !== settings.hwdevice ||
     draft.hwfallback !== settings.hwfallback ||
+    draft.checkForUpdates !== settings.checkForUpdates ||
     INCLUDES.some(([k]) => draft.fullscreenIncludes[k] !== settings.fullscreenIncludes[k]) ||
     JSON.stringify(draft.previewBg) !== JSON.stringify(settings.previewBg) ||
     JSON.stringify(draft.previewBorder) !== JSON.stringify(settings.previewBorder);
@@ -107,6 +110,7 @@ export function SettingsModal({ settings, onSave, onClose }: Props) {
         {active === "background" && <PreviewerSection draft={draft} setDraft={setDraft} />}
         {active === "fullscreen" && <FullscreenSection draft={draft} setDraft={setDraft} />}
         {active === "infobox" && <InfoBoxSection draft={draft} setDraft={setDraft} />}
+        {active === "general" && <GeneralSection draft={draft} setDraft={setDraft} />}
         </div>
       </div>
     </Modal>

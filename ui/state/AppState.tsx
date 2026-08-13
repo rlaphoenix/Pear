@@ -171,6 +171,7 @@ function useSettings() {
     previewBorder: DEFAULT_PREVIEW_BORDER,
     hwdevice: "",
     hwfallback: true,
+    checkForUpdates: true,
   });
   const [restoreUi, setRestoreUi] = useState<{
     tab: string;
@@ -235,6 +236,7 @@ function useSettings() {
           previewBorder: { ...DEFAULT_PREVIEW_BORDER, ...(prefs.previewBorder ?? {}) },
           hwdevice: (prefs.hwdevice ?? "") as AppSettings["hwdevice"],
           hwfallback: prefs.hwfallback ?? true,
+          checkForUpdates: prefs.checkForUpdates ?? true,
         });
         void setHwdevice((prefs.hwdevice ?? "") as AppSettings["hwdevice"]);
         void setHwfallback(prefs.hwfallback ?? true);
