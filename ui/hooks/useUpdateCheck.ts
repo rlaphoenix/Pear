@@ -6,6 +6,8 @@ import { isPortable } from "@/lib/tauri";
 
 const REPO = "rlaphoenix/pear";
 const IGNORE_KEY = "pear.ignoredUpdate";
+const LAST_CHECK_KEY = "pear.lastUpdateCheck";
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 export interface UpdateInfo {
   version: string;
@@ -54,11 +56,25 @@ export function useUpdateCheck(enabled: boolean) {
     }
     if (didCheck.current) return;
     didCheck.current = true;
+    let last = 0;
+    try {
+      last = parseInt(localStorage.getItem(LAST_CHECK_KEY) ?? "", 10) || 0;
+    } catch {
+    }
+    const elapsed = Date.now() - last;
+    if (last && elapsed >= 0 && elapsed < DAY_MS) {
+      setUpdateState("hidden");
+      return;
+    }
     let cancelled = false;
     setUpdateState("checking");
     void (async () => {
       try {
         const found = await check();
+        try {
+          localStorage.setItem(LAST_CHECK_KEY, String(Date.now()));
+        } catch {
+        }
         if (cancelled) {
           if (found) await found.close().catch(() => {});
           return;
