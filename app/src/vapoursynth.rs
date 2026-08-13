@@ -6,9 +6,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Condvar, Mutex, OnceLock};
 
 use vapoursynth::api::API;
-use vapoursynth::core::CoreRef;
-use vapoursynth::ffi;
-use vapoursynth::map::Error as MapError;
+use vapoursynth::map::{Error as MapError, OwnedMap};
 use vapoursynth::prelude::*;
 use vapoursynth::video_info::{Framerate, Resolution};
 
@@ -150,21 +148,6 @@ fn install_console_log(env: &Environment, index_key: Option<String>) {
             }
         }
     });
-}
-
-/// `CoreRef`/`API` are each a single `NonNull` field (the crate never exposes the raw
-/// pointer publicly), so their layout IS the pointer. The const asserts make a future
-/// crate layout change a compile error rather than silent UB.
-fn core_raw(c: &CoreRef) -> *mut ffi::VSCore {
-    const _: () =
-        assert!(std::mem::size_of::<CoreRef<'static>>() == std::mem::size_of::<*mut ffi::VSCore>());
-    unsafe { *(c as *const CoreRef as *const *mut ffi::VSCore) }
-}
-
-fn api_raw(a: &API) -> *const ffi::VSAPI {
-    const _: () =
-        assert!(std::mem::size_of::<API>() == std::mem::size_of::<*const ffi::VSAPI>());
-    unsafe { *(a as *const API as *const *const ffi::VSAPI) }
 }
 
 fn build_env_from_script(src: &str) -> Result<Environment, String> {
@@ -470,30 +453,25 @@ pub fn bestsource_version() -> String {
     if !supported() {
         return "not found".into();
     }
-    let Ok(env) = build_env_from_script("import vapoursynth as vs\n") else {
-        return "unknown".into();
-    };
-    let Ok(core) = env.get_core() else {
+    let program = "import vapoursynth as vs\n\
+                   try:\n\
+                       _v = vs.core.bs.version\n\
+                       bs_version = f'{_v.major}.{_v.minor}'\n\
+                   except AttributeError:\n\
+                       bs_version = 'not found'\n";
+    let Ok(env) = build_env_from_script(program) else {
         return "unknown".into();
     };
     let Some(api) = API::get() else {
         return "unknown".into();
     };
-    let api_ptr = api_raw(&api);
-    let core_ptr = core_raw(&core);
-    unsafe {
-        let (Some(get_by_id), Some(get_ver)) =
-            ((*api_ptr).getPluginByID, (*api_ptr).getPluginVersion)
-        else {
-            return "unknown".into();
-        };
-        let id = std::ffi::CString::new("com.vapoursynth.bestsource").unwrap();
-        let plugin = get_by_id(id.as_ptr(), core_ptr);
-        if plugin.is_null() {
-            return "not found".into();
-        }
-        let ver = get_ver(plugin);
-        format!("{}.{}", (ver >> 16) & 0xffff, ver & 0xffff)
+    let mut map = OwnedMap::new(api);
+    if env.get_variable("bs_version", &mut map).is_err() {
+        return "unknown".into();
+    }
+    match map.get_data("bs_version") {
+        Ok(bytes) => String::from_utf8_lossy(bytes).into_owned(),
+        Err(_) => "unknown".into(),
     }
 }
 
