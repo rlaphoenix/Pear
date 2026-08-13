@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowUpCircle, Loader2 } from "lucide-react";
+import { ArrowUpCircle, Download, Loader2 } from "lucide-react";
 import { Modal } from "@/components/primitives/modal";
 import { Button } from "@/components/primitives/button";
 import { CheckboxField } from "@/components/primitives/checkbox";
@@ -8,14 +8,18 @@ export function UpdateModal({
   version,
   currentVersion,
   updating,
+  portable,
   onUpdate,
+  onDownload,
   onViewNotes,
   onDismiss,
 }: {
   version: string;
   currentVersion: string;
   updating: boolean;
+  portable: boolean;
   onUpdate: () => void;
+  onDownload: () => void;
   onViewNotes: () => void;
   onDismiss: (ignore: boolean) => void;
 }) {
@@ -37,10 +41,17 @@ export function UpdateModal({
             <Button variant="secondary" onClick={() => onDismiss(ignore)} disabled={updating}>
               Dismiss
             </Button>
-            <Button onClick={onUpdate} disabled={updating}>
-              {updating ? <Loader2 className="size-4 animate-spin" /> : <ArrowUpCircle className="size-4" />}
-              {updating ? "Updating…" : "Update now"}
-            </Button>
+            {portable ? (
+              <Button onClick={onDownload}>
+                <Download className="size-4" />
+                Download
+              </Button>
+            ) : (
+              <Button onClick={onUpdate} disabled={updating}>
+                {updating ? <Loader2 className="size-4 animate-spin" /> : <ArrowUpCircle className="size-4" />}
+                {updating ? "Updating…" : "Update now"}
+              </Button>
+            )}
           </div>
         </div>
       }
@@ -52,8 +63,17 @@ export function UpdateModal({
         <div className="flex min-w-0 flex-col gap-2 pt-1">
           <p className="text-xl font-semibold text-foreground">Update available</p>
           <p className="text-sm leading-relaxed text-muted-foreground">
-            Pear {version} is ready to install. You're on {currentVersion}. It will
-            download and restart the app for you.
+            {portable ? (
+              <>
+                Pear {version} is available. You're on {currentVersion}. Open the release
+                page to grab the latest portable build.
+              </>
+            ) : (
+              <>
+                Pear {version} is ready to install. You're on {currentVersion}. It will
+                download and restart the app for you.
+              </>
+            )}
           </p>
           <button
             type="button"

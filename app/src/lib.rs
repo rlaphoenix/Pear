@@ -132,6 +132,7 @@ pub fn run() {
             commands::discard_indexes,
             commands::file_exists,
             commands::file_id,
+            commands::is_portable,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

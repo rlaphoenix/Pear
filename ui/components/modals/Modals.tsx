@@ -8,7 +8,6 @@ import { NameProjectModal } from "@/components/modals/NameProjectModal";
 import { MissingSourcesModal } from "@/components/modals/MissingSourcesModal";
 import { SourceMismatchModal } from "@/components/modals/SourceMismatchModal";
 import { openUrl, type AppSettings } from "@/lib/tauri";
-import { installUpdateInApp, ignoreUpdate } from "@/lib/update";
 import { toast } from "@/lib/toast";
 import { type useUpdateCheck } from "@/hooks/useUpdateCheck";
 import { type useProjectLifecycle } from "@/hooks/useProjectLifecycle";
@@ -58,14 +57,12 @@ export function Modals({
           version={upd.version}
           currentVersion={upd.currentVersion}
           updating={update.updating}
+          portable={update.portable}
+          onDownload={() => void openUrl(upd.url).catch(() => {})}
           onUpdate={async () => {
             update.setUpdating(true);
             try {
-              const installed = await installUpdateInApp();
-              if (!installed) {
-                await openUrl(upd.url).catch(() => {});
-                update.setUpdateModalOpen(false);
-              }
+              await update.install();
             } catch {
               await openUrl(upd.url).catch(() => {});
               toast({ kind: "error", msg: "In-app update failed - opened the release page instead." });
@@ -75,12 +72,9 @@ export function Modals({
             }
           }}
           onViewNotes={() => void openUrl(upd.url).catch(() => {})}
-          onDismiss={(ignore) => {
-            if (ignore) {
-              ignoreUpdate(upd.version);
-              update.setUpdateState("hidden");
-            }
-            update.setUpdateModalOpen(false);
+          onDismiss={(shouldIgnore) => {
+            if (shouldIgnore) update.ignore();
+            else update.setUpdateModalOpen(false);
           }}
         />
       )}

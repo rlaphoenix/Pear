@@ -1,34 +1,117 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { check, type Update } from "@tauri-apps/plugin-updater";
+import { relaunch } from "@tauri-apps/plugin-process";
 import { type UpdateState } from "@/components/UpdateChecker";
-import { checkForUpdate, isUpdateIgnored, type UpdateInfo } from "@/lib/update";
+import { isPortable } from "@/lib/tauri";
+
+const REPO = "rlaphoenix/pear";
+const IGNORE_KEY = "pear.ignoredUpdate";
+
+export interface UpdateInfo {
+  version: string;
+  currentVersion: string;
+  url: string;
+}
+
+function parseVersion(v: string): number[] {
+  return v.replace(/^v/i, "").split(/[.-]/).map((p) => parseInt(p, 10) || 0);
+}
+
+function isNewer(a: string, b: string): boolean {
+  const pa = parseVersion(a);
+  const pb = parseVersion(b);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const x = pa[i] ?? 0;
+    const y = pb[i] ?? 0;
+    if (x !== y) return x > y;
+  }
+  return false;
+}
 
 export function useUpdateCheck() {
   const [updateState, setUpdateState] = useState<UpdateState>("hidden");
   const [update, setUpdate] = useState<UpdateInfo | null>(null);
   const [updateModalOpen, setUpdateModalOpen] = useState(false);
   const [updating, setUpdating] = useState(false);
+  const [portable, setPortable] = useState(false);
+  const handleRef = useRef<Update | null>(null);
+
+  useEffect(() => {
+    isPortable().then(setPortable).catch(() => {});
+  }, []);
 
   useEffect(() => {
     setUpdateState("checking");
     void (async () => {
       try {
-        const info = await checkForUpdate();
-        if (!info) {
+        const found = await check();
+        if (!found) {
           setUpdateState("hidden");
           return;
         }
-        setUpdate(info);
-        if (isUpdateIgnored(info.version)) {
-          setUpdateState("hidden");
-        } else {
-          setUpdateState("available");
-          setUpdateModalOpen(true);
+        let ignored = "";
+        try {
+          ignored = localStorage.getItem(IGNORE_KEY) ?? "";
+        } catch {
         }
+        if (ignored !== "" && !isNewer(found.version, ignored)) {
+          await found.close().catch(() => {});
+          setUpdateState("hidden");
+          return;
+        }
+        handleRef.current = found;
+        setUpdate({
+          version: found.version,
+          currentVersion: found.currentVersion,
+          url: `https://github.com/${REPO}/releases/tag/v${found.version}`,
+        });
+        setUpdateState("available");
+        setUpdateModalOpen(true);
       } catch {
         setUpdateState("hidden");
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const install = useCallback(
+    async (onProgress?: (fraction: number | null) => void): Promise<void> => {
+      const handle = handleRef.current;
+      if (!handle) throw new Error("no update available");
+      let total = 0;
+      let downloaded = 0;
+      await handle.downloadAndInstall((event) => {
+        switch (event.event) {
+          case "Started":
+            total = event.data.contentLength ?? 0;
+            onProgress?.(total > 0 ? 0 : null);
+            break;
+          case "Progress":
+            downloaded += event.data.chunkLength;
+            onProgress?.(total > 0 ? downloaded / total : null);
+            break;
+          case "Finished":
+            onProgress?.(1);
+            break;
+        }
+      });
+      await relaunch();
+    },
+    [],
+  );
+
+  const ignore = useCallback((): void => {
+    const handle = handleRef.current;
+    if (handle) {
+      try {
+        localStorage.setItem(IGNORE_KEY, handle.version);
+      } catch {
+      }
+      void handle.close().catch(() => {});
+      handleRef.current = null;
+    }
+    setUpdateState("hidden");
+    setUpdateModalOpen(false);
   }, []);
 
   return {
@@ -39,5 +122,8 @@ export function useUpdateCheck() {
     setUpdateModalOpen,
     updating,
     setUpdating,
+    portable,
+    install,
+    ignore,
   };
 }

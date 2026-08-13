@@ -1795,6 +1795,15 @@ pub fn file_exists(path: String) -> bool {
 }
 
 #[tauri::command]
+pub fn is_portable() -> bool {
+    std::env::current_exe()
+        .ok()
+        .and_then(|exe| exe.parent().map(|dir| dir.join("uninstall.exe")))
+        .map(|uninstaller| !uninstaller.exists())
+        .unwrap_or(true)
+}
+
+#[tauri::command]
 pub async fn file_id(path: String) -> Result<config::FileId, String> {
     tauri::async_runtime::spawn_blocking(move || config::file_id(&path))
         .await

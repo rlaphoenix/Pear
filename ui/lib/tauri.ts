@@ -644,4 +644,6 @@ export const toggleDevtools = () => invoke<void>("toggle_devtools");
 export const fileExists = (path: string) =>
   invoke<boolean>("file_exists", { path });
 
+export const isPortable = () => invoke<boolean>("is_portable");
+
 export const fileId = (path: string) => invoke<FileId>("file_id", { path });
