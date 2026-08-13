@@ -69,8 +69,8 @@ export function Select<T extends string>({
           className,
         )}
       >
-        <BaseSelect.Value />
-        <BaseSelect.Icon className="text-muted-foreground">
+        <BaseSelect.Value className="min-w-0 flex-1 truncate text-left" />
+        <BaseSelect.Icon className="shrink-0 text-muted-foreground">
           <ChevronDown className="size-4" />
         </BaseSelect.Icon>
       </BaseSelect.Trigger>
