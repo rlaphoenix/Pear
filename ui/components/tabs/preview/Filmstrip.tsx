@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { render, type GenParams, type ProjectFrame, type DataUrl } from "@/lib/tauri";
+import { render, nextRenderSeq, type GenParams, type ProjectFrame, type DataUrl } from "@/lib/tauri";
 
 interface Props {
   base: number;
@@ -157,7 +157,7 @@ export function Filmstrip({
     const t = setTimeout(() => {
       if (filmGenKeyRef.current !== paramsKey) {
         filmGenKeyRef.current = paramsKey;
-        filmGenRef.current++;
+        filmGenRef.current = nextRenderSeq();
       }
       const gen = filmGenRef.current;
       for (let s = 0; s < sourceCount; s++) {

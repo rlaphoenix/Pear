@@ -9,7 +9,7 @@ import {
   type SetStateAction,
 } from "react";
 import { decodeFrame, rawFrameIds } from "@/lib/utils";
-import { render, releaseFrames, type Comparison, type GenParams, type SourceOut } from "@/lib/tauri";
+import { render, releaseFrames, nextRenderSeq, type Comparison, type GenParams, type SourceOut } from "@/lib/tauri";
 import type { PreviewMode } from "@/lib/preview";
 import type { UiSource } from "@/state/AppState";
 
@@ -108,7 +108,6 @@ export function usePreviewEngine(
   const prefetchRef = useRef<Map<number, PrefetchEntry>>(new Map());
   const prefetchInflightRef = useRef<Set<number>>(new Set());
   const prefetchGenRef = useRef(0);
-  const seqRef = useRef(0);
 
   // At most ONE preview render is in flight; seeks that arrive while it runs collapse to the
   // LATEST. Cooperative cancellation alone can't bound this: a preview render dispatches its
@@ -171,7 +170,7 @@ export function usePreviewEngine(
     }
     prefetchRef.current.clear();
     prefetchInflightRef.current.clear();
-    prefetchGenRef.current++;
+    prefetchGenRef.current = nextRenderSeq();
   };
 
   const startPrefetch = (f: number) => {
@@ -284,7 +283,7 @@ export function usePreviewEngine(
 
     previewBusyRef.current = true;
     previewDirtyRef.current = false;
-    const seq = ++seqRef.current;
+    const seq = nextRenderSeq();
     setLoading(true);
     render(p, {
       composite: true,

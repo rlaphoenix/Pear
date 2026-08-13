@@ -511,6 +511,9 @@ export interface IndexEvent {
 export const render = (params: GenParams, req: RenderReq) =>
   invoke<RenderOut>("render", { params, req });
 
+let renderSeq = 0;
+export const nextRenderSeq = (): number => ++renderSeq;
+
 export const frameBytes = (id: number) =>
   invoke<ArrayBuffer>("frame_bytes", { id });
 
