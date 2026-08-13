@@ -58,7 +58,7 @@ export function Modals({
           currentVersion={upd.currentVersion}
           updating={update.updating}
           portable={update.portable}
-          onDownload={() => void openUrl(upd.url).catch(() => {})}
+          onDownload={() => void openUrl(upd.downloadUrl).catch(() => {})}
           onUpdate={async () => {
             update.setUpdating(true);
             try {

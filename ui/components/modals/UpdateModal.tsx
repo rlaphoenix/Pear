@@ -65,8 +65,8 @@ export function UpdateModal({
           <p className="text-sm leading-relaxed text-muted-foreground">
             {portable ? (
               <>
-                Pear {version} is available. You're on {currentVersion}. Open the release
-                page to grab the latest portable build.
+                Pear {version} is available. You're on {currentVersion}. Download the new
+                portable build and replace your current one.
               </>
             ) : (
               <>

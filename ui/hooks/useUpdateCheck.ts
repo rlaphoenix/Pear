@@ -13,6 +13,7 @@ export interface UpdateInfo {
   version: string;
   currentVersion: string;
   url: string;
+  downloadUrl: string;
 }
 
 function parseVersion(v: string): number[] {
@@ -98,6 +99,7 @@ export function useUpdateCheck(enabled: boolean) {
           version: found.version,
           currentVersion: found.currentVersion,
           url: `https://github.com/${REPO}/releases/tag/v${found.version}`,
+          downloadUrl: `https://github.com/${REPO}/releases/download/v${found.version}/Pear_v${found.version}_x64-portable.exe`,
         });
         setUpdateState("available");
         setUpdateModalOpen(true);
