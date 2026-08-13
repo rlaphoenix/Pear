@@ -44,3 +44,6 @@ lto = true
 opt-level = "s"
 panic = "abort"
 strip = true
+
+[patch.crates-io]
+vapoursynth = { git = "https://github.com/rlaphoenix/vapoursynth-rs", branch = "safe-log-handler" }

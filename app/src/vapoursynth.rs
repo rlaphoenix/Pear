@@ -1,8 +1,6 @@
 use dolby_vision::rpu::dovi_rpu::DoviRpu;
 use image::RgbaImage;
 use std::collections::HashMap;
-use std::ffi::CStr;
-use std::os::raw::{c_char, c_int, c_void};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Condvar, Mutex, OnceLock};
@@ -82,10 +80,14 @@ fn vs_script_error<E: std::error::Error>(e: E) -> String {
     format!("VapourSynth script error\n{}", msg.trim())
 }
 
-fn build_env(program: &str) -> Result<Environment, String> {
+fn build_env(program: &str, index_key: Option<&str>) -> Result<Environment, String> {
     let mut env = Environment::new().map_err(vs_script_error)?;
-    install_console_log(&env);
-    env.eval_script(program).map_err(vs_script_error)?;
+    install_console_log(&env, index_key.map(str::to_string));
+    let res = env.eval_script(program);
+    if let Some(key) = index_key {
+        forward_index(key, None);
+    }
+    res.map_err(vs_script_error)?;
     Ok(env)
 }
 
@@ -102,10 +104,6 @@ fn forward_index(key: &str, percent: Option<u8>) {
     }
 }
 
-struct ProgressCtx {
-    key: String,
-}
-
 fn parse_bs_progress(msg: &str) -> Option<Option<u8>> {
     if msg.contains("indexing complete") {
         return Some(Some(100));
@@ -119,58 +117,39 @@ fn parse_bs_progress(msg: &str) -> Option<Option<u8>> {
     }
 }
 
-/// `user` is null on render cores (forward only) or a `*const ProgressCtx` on probe cores;
-/// the cast below relies on that.
-unsafe extern "C" fn log_cb(msg_type: c_int, msg: *const c_char, user: *mut c_void) {
-    if msg.is_null() {
-        return;
-    }
-    let text = CStr::from_ptr(msg).to_string_lossy();
-    forward_to_console(msg_type, &text);
-    if !user.is_null() && msg_type == ffi::VSMessageType_mtInformation as c_int {
-        let ctx = &*(user as *const ProgressCtx);
-        if let Some(pct) = parse_bs_progress(&text) {
-            forward_index(&ctx.key, pct);
-        }
-    }
-}
-
-unsafe extern "C" fn log_free(user: *mut c_void) {
-    if !user.is_null() {
-        drop(Box::from_raw(user as *mut ProgressCtx));
-    }
-}
-
-type LogSink = Box<dyn Fn(c_int, &str) + Send + Sync>;
+type LogSink = Box<dyn Fn(MessageType, &str) + Send + Sync>;
 static LOG_SINK: OnceLock<LogSink> = OnceLock::new();
 
-pub fn set_log_sink<F: Fn(c_int, &str) + Send + Sync + 'static>(f: F) {
+pub fn set_log_sink<F: Fn(MessageType, &str) + Send + Sync + 'static>(f: F) {
     let _ = LOG_SINK.set(Box::new(f));
 }
 
-fn forward_to_console(level: c_int, msg: &str) {
+fn forward_to_console(level: MessageType, msg: &str) {
     if let Some(sink) = LOG_SINK.get() {
         sink(level, msg);
     }
 }
 
 fn core_log(msg: impl AsRef<str>) {
-    forward_to_console(1, &format!("core: {}", msg.as_ref()));
+    forward_to_console(MessageType::Information, &format!("core: {}", msg.as_ref()));
 }
 
 fn core_dbg(msg: impl AsRef<str>) {
-    forward_to_console(0, &format!("core: {}", msg.as_ref()));
+    forward_to_console(MessageType::Debug, &format!("core: {}", msg.as_ref()));
 }
 
-fn install_console_log(env: &Environment) {
-    let Some(api) = API::get() else { return };
+fn install_console_log(env: &Environment, index_key: Option<String>) {
     let Ok(core) = env.get_core() else { return };
-    let api_ptr = api_raw(&api);
-    unsafe {
-        if let Some(add) = (*api_ptr).addLogHandler {
-            add(Some(log_cb), None, std::ptr::null_mut(), core_raw(&core));
+    core.add_log_handler(move |level, msg| {
+        forward_to_console(level, msg);
+        if let Some(key) = &index_key {
+            if matches!(level, MessageType::Information) {
+                if let Some(pct) = parse_bs_progress(msg) {
+                    forward_index(key, pct);
+                }
+            }
         }
-    }
+    });
 }
 
 /// `CoreRef`/`API` are each a single `NonNull` field (the crate never exposes the raw
@@ -186,43 +165,6 @@ fn api_raw(a: &API) -> *const ffi::VSAPI {
     const _: () =
         assert!(std::mem::size_of::<API>() == std::mem::size_of::<*const ffi::VSAPI>());
     unsafe { *(a as *const API as *const *const ffi::VSAPI) }
-}
-
-type ProgressHandle = (*const ffi::VSAPI, *mut ffi::VSCore, *mut ffi::VSLogHandle, *mut ProgressCtx);
-
-fn register_progress(env: &Environment, key: &str) -> Option<ProgressHandle> {
-    let api = API::get()?;
-    let api_ptr = api_raw(&api);
-    let add = unsafe { (*api_ptr).addLogHandler? };
-    let core_ptr = core_raw(&env.get_core().ok()?);
-    let ctx = Box::into_raw(Box::new(ProgressCtx { key: key.to_string() }));
-    let handle = unsafe { add(Some(log_cb), Some(log_free), ctx as *mut c_void, core_ptr) };
-    if handle.is_null() {
-        unsafe { drop(Box::from_raw(ctx)) };
-        return None;
-    }
-    Some((api_ptr, core_ptr, handle, ctx))
-}
-
-fn build_env_with_progress(program: &str, key: &str) -> Result<Environment, String> {
-    let mut env = Environment::new().map_err(vs_script_error)?;
-    let handler = register_progress(&env, key);
-    let res = env.eval_script(program);
-    if let Some((api_ptr, core_ptr, handle, ctx)) = handler {
-        // removeLogHandler invokes log_free (which drops the ctx box); if it's somehow
-        // unavailable, drop the ctx ourselves so it can't leak.
-        unsafe {
-            match (*api_ptr).removeLogHandler {
-                Some(remove) => {
-                    remove(handle, core_ptr);
-                }
-                None => drop(Box::from_raw(ctx)),
-            }
-        }
-    }
-    forward_index(key, None);
-    res.map_err(vs_script_error)?;
-    Ok(env)
 }
 
 fn build_env_from_script(src: &str) -> Result<Environment, String> {
@@ -278,7 +220,7 @@ fn acquire_core(program: &str) -> Result<CoreHandle, String> {
         }
         *slot = None;
         core_log(format!("building new core ({}-byte program)", program.len()));
-        let env = build_env(program)?;
+        let env = build_env(program, None)?;
         let arc = Arc::new(env);
         let cancel = Arc::new(AtomicBool::new(false));
         *slot = Some(Live {
@@ -683,10 +625,7 @@ pub fn vsprobe(
 ) -> Result<SourceInfo, String> {
     ensure_supported()?;
     let program = build_probe_script(path, script, deint);
-    let env = match progress_key {
-        Some(key) => build_env_with_progress(&program, key)?,
-        None => build_env(&program)?,
-    };
+    let env = build_env(&program, progress_key)?;
     let (node, _alpha) = env
         .get_output(0)
         .map_err(|e| format!("VapourSynth has no output clip: {e}"))?;
@@ -753,7 +692,7 @@ fn build_meta_program(path: &str) -> String {
 
 pub fn probe_metadata(path: &str) -> Result<SourceMeta, String> {
     ensure_supported()?;
-    let env = build_env(&build_meta_program(path))?;
+    let env = build_env(&build_meta_program(path), None)?;
     let (node, _alpha) = env
         .get_output(0)
         .map_err(|e| format!("VapourSynth has no output clip: {e}"))?;

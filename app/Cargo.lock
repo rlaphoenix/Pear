@@ -5361,8 +5361,7 @@ dependencies = [
 [[package]]
 name = "vapoursynth"
 version = "0.5.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "413b994d9955202f99298ef502dec6d84f1be7603483d19158a365f9fdb8f128"
+source = "git+https://github.com/rlaphoenix/vapoursynth-rs?branch=safe-log-handler#35869f7e2b94313c7f2de4f37b49e965b3e9462a"
 dependencies = [
  "anyhow",
  "thiserror 2.0.19",
@@ -5372,8 +5371,7 @@ dependencies = [
 [[package]]
 name = "vapoursynth-sys"
 version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4ef47dc5817613dbe0251eadbe2cea0443edebbb3a551be7b6728314ff44e12e"
+source = "git+https://github.com/rlaphoenix/vapoursynth-rs?branch=safe-log-handler#35869f7e2b94313c7f2de4f37b49e965b3e9462a"
 dependencies = [
  "libloading 0.9.0",
 ]

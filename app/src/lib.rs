@@ -85,13 +85,7 @@ pub fn run() {
                      Support development: https://ko-fi.com/rlaphoenix"
                 );
                 vapoursynth::set_log_sink(|level, msg| {
-                    let tag = match level {
-                        0 => "DEBUG",
-                        1 => "INFO",
-                        2 => "WARNING",
-                        3 => "CRITICAL",
-                        _ => "FATAL",
-                    };
+                    let tag = format!("{level:?}").to_uppercase();
                     let ts = chrono::Local::now().format("%H:%M:%S%.3f");
                     eprintln!("[{ts}] [VapourSynth {tag}] {msg}");
                 });
