@@ -1,4 +1,4 @@
-import { NumberField } from "@base-ui-components/react/number-field";
+import { NumberField } from "@base-ui/react/number-field";
 import { Minus, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 

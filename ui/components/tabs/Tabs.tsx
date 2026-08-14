@@ -34,7 +34,7 @@ type Props = {
   initializing: boolean;
   indexingStatus: ReturnType<typeof useIndexingStatus>;
   loadDetail: string | null;
-  previewRef: RefObject<PreviewTabHandle>;
+  previewRef: RefObject<PreviewTabHandle | null>;
   onAddCurrentComparison: () => void;
   scriptFor: (id: SourceId) => string;
   setScripts: Dispatch<SetStateAction<Record<SourceId, string>>>;
