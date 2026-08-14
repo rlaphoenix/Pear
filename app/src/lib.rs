@@ -120,7 +120,6 @@ pub fn run() {
             commands::open_vapoursynth_folder,
             commands::build_info,
             commands::vs_status,
-            commands::capabilities,
             commands::mark_recent,
             commands::remove_recent,
             commands::take_pending_project,

@@ -3,7 +3,7 @@ import { FileVideo, FolderOpen, Loader2 } from "lucide-react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { cn, MEDIA_EXTS } from "@/lib/utils";
 import { Button } from "@/components/primitives/button";
-import { SubLabel } from "@/components/primitives/section";
+import { SubLabel } from "@/components/tabs/sources/SubLabel";
 import { fileExists } from "@/lib/tauri";
 import { type UiSource } from "@/state/AppState";
 import { useProject } from "@/state/AppState";

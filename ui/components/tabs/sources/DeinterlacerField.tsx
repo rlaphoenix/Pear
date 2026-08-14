@@ -1,6 +1,6 @@
 import { Layers } from "lucide-react";
 import { Select } from "@/components/primitives/select";
-import { SubLabel } from "@/components/primitives/section";
+import { SubLabel } from "@/components/tabs/sources/SubLabel";
 import { Checkbox } from "@/components/primitives/checkbox";
 import { type DeintKernel } from "@/lib/tauri";
 import { type UiSource } from "@/state/AppState";

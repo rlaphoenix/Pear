@@ -1692,26 +1692,6 @@ pub async fn vs_status(state: State<'_, AppState>) -> Result<vapoursynth::VsStat
     Ok(st)
 }
 
-#[derive(Debug, Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Capabilities {
-    pub deinterlacers: Vec<String>,
-    pub keyframes: bool,
-}
-
-#[tauri::command]
-pub async fn capabilities() -> Capabilities {
-    tauri::async_runtime::spawn_blocking(|| Capabilities {
-        deinterlacers: vapoursynth::deinterlacers(),
-        keyframes: vapoursynth::supported(),
-    })
-    .await
-    .unwrap_or(Capabilities {
-        deinterlacers: Vec::new(),
-        keyframes: false,
-    })
-}
-
 #[tauri::command]
 pub fn open_url(url: String) -> Result<(), String> {
     if !(url.starts_with("http://") || url.starts_with("https://")) {

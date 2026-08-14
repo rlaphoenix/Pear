@@ -186,31 +186,3 @@ export function exportMarkup(
   renderMarkup(ctx, annotations, w, h);
   return canvas.toDataURL("image/png");
 }
-
-export function flattenWithMarkup(
-  baseDataUrl: string,
-  annotations: Annotation[],
-  w: number,
-  h: number,
-): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => {
-      const canvas = document.createElement("canvas");
-      canvas.width = w;
-      canvas.height = h;
-      const ctx = canvas.getContext("2d")!;
-      ctx.drawImage(img, 0, 0, w, h);
-      // renderMarkup clears its target first, so draw the markup on its own
-      // canvas and composite that over the base frame.
-      const overlay = document.createElement("canvas");
-      overlay.width = w;
-      overlay.height = h;
-      renderMarkup(overlay.getContext("2d")!, annotations, w, h);
-      ctx.drawImage(overlay, 0, 0);
-      resolve(canvas.toDataURL("image/png"));
-    };
-    img.onerror = () => reject(new Error("failed to load frame"));
-    img.src = baseDataUrl;
-  });
-}

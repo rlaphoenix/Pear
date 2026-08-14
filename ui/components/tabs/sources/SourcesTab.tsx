@@ -12,7 +12,7 @@ import {
 import { cn } from "@/lib/utils";
 import { NumberInput } from "@/components/primitives/number-input";
 import { Select } from "@/components/primitives/select";
-import { SubLabel } from "@/components/primitives/section";
+import { SubLabel } from "@/components/tabs/sources/SubLabel";
 import { CheckboxField } from "@/components/primitives/checkbox";
 import { SortableList, SortableRow } from "@/components/primitives/sortable";
 import {

@@ -1097,13 +1097,6 @@ fn field_val(d: &Deint) -> u8 {
     }
 }
 
-pub fn deinterlacers() -> Vec<String> {
-    ["bwdif", "nnedi3", "qtgmc", "bob"]
-        .iter()
-        .map(|s| s.to_string())
-        .collect()
-}
-
 const TO_RGB_FN: &str = r#"def _to_rgb(clip, m, r, fmt):
     if clip.format.color_family == vs.RGB:
         return core.resize.Bicubic(clip, format=fmt)

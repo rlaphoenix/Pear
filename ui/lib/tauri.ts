@@ -40,13 +40,6 @@ export const RANGES: { value: Range; label: string; description: string }[] = [
 ];
 
 export type HdrFormat = "sdr" | "hdr10" | "hdr10plus" | "hlg" | "dovi";
-export const HDR_LABELS: Record<HdrFormat, string> = {
-  sdr: "SDR",
-  hdr10: "HDR10",
-  hdr10plus: "HDR10+",
-  hlg: "HLG",
-  dovi: "Dolby Vision",
-};
 
 export type TonemapSrc = "sdr" | "hdr10" | "hdr10plus" | "hlg" | "dovi";
 export const SRC_CSPS: { value: TonemapSrc; label: string; description: string }[] = [
@@ -535,12 +528,6 @@ export const sourceKeyframes = (
   deintKernel: DeintKernel = "bwdif",
   deintDouble = false,
 ) => invoke<number[]>("source_keyframes", { path, deinterlace, deintKernel, deintDouble });
-
-export interface Capabilities {
-  deinterlacers: string[];
-  keyframes: boolean;
-}
-export const capabilities = () => invoke<Capabilities>("capabilities");
 
 export const saveAll = (
   params: GenParams,

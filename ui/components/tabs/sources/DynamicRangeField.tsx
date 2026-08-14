@@ -1,7 +1,7 @@
 import { Sun } from "lucide-react";
 import { NumberInput } from "@/components/primitives/number-input";
 import { Select } from "@/components/primitives/select";
-import { SubLabel } from "@/components/primitives/section";
+import { SubLabel } from "@/components/tabs/sources/SubLabel";
 import { CheckboxField, Checkbox } from "@/components/primitives/checkbox";
 import {
   SRC_CSPS,
