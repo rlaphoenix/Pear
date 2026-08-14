@@ -1,9 +1,9 @@
 import { type ReactNode } from "react";
-import { ImageDown, ImageOff } from "lucide-react";
+import { ImageDown, ImageOff, Loader2 } from "lucide-react";
 import { cn, splitSourceError, frameToCanvas, canvasToBlob } from "@/lib/utils";
 import { renderMarkup } from "@/lib/markup";
 import { useZoom } from "@/hooks/useZoom";
-import { type Comparison, type DataUrl, type ProjectFrame } from "@/lib/tauri";
+import { type Comparison, type DataUrl, type ProjectFrame, type SaveProgress } from "@/lib/tauri";
 import type { PreviewMode } from "@/lib/preview";
 import { MarkupToolbar } from "@/components/tabs/export/MarkupToolbar";
 import { MarkupCanvas } from "@/components/tabs/export/MarkupCanvas";
@@ -22,6 +22,7 @@ type Props = {
   previewError: string | null;
   markup: ReturnType<typeof useMarkup>;
   onExport: () => void;
+  exportProgress: SaveProgress | null;
   resize: ReturnType<typeof useComparisonsResize>;
   framestripHidden: boolean;
   comparisons: number[];
@@ -41,6 +42,7 @@ export function ExportTab({
   previewError,
   markup,
   onExport,
+  exportProgress,
   resize,
   framestripHidden,
   comparisons,
@@ -116,11 +118,27 @@ export function ExportTab({
           <button
             type="button"
             onClick={onExport}
+            disabled={exportProgress !== null}
             title="Export the comparison images"
-            className="flex shrink-0 items-center gap-1.5 border-l border-border bg-primary px-6 text-xs font-semibold text-primary-foreground outline-none transition-colors hover:bg-primary/90"
+            className="flex shrink-0 items-center gap-1.5 border-l border-border bg-primary px-6 text-xs font-semibold text-primary-foreground outline-none transition-colors hover:bg-primary/90 disabled:cursor-default disabled:bg-muted disabled:text-muted-foreground disabled:hover:bg-muted"
           >
-            <ImageDown className="size-3.5" />
-            Export Images
+            {exportProgress !== null ? (
+              <>
+                <Loader2 className="size-3.5 animate-spin" />
+                Exporting...{" "}
+                {String(
+                  exportProgress.total > 0
+                    ? Math.round((exportProgress.done / exportProgress.total) * 100)
+                    : 0,
+                ).padStart(2, "0")}
+                %
+              </>
+            ) : (
+              <>
+                <ImageDown className="size-3.5" />
+                Export Images
+              </>
+            )}
           </button>
         </div>
 

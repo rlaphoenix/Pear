@@ -13,6 +13,7 @@ import {
   type GenParams,
   type ProjectFrame,
   type RecentProject,
+  type SaveProgress,
   type SourceId,
   type TabId,
 } from "@/lib/tauri";
@@ -48,6 +49,7 @@ type Props = {
   previewError: string | null;
   markup: ReturnType<typeof useMarkup>;
   onExport: () => void;
+  exportProgress: SaveProgress | null;
   resize: ReturnType<typeof useComparisonsResize>;
   comparisons: number[];
   thumbs: Record<ProjectFrame, DataUrl>;
@@ -85,6 +87,7 @@ export function Tabs({
   previewError,
   markup,
   onExport,
+  exportProgress,
   resize,
   comparisons,
   thumbs,
@@ -137,6 +140,7 @@ export function Tabs({
                 previewError={previewError}
                 markup={markup}
                 onExport={onExport}
+                exportProgress={exportProgress}
                 resize={resize}
                 framestripHidden={fullscreen && !appSettings.fullscreenIncludes.framestrip}
                 comparisons={comparisons}

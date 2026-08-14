@@ -14,7 +14,7 @@ use std::io::Cursor;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Condvar, Mutex, OnceLock};
-use tauri::{AppHandle, Manager, State};
+use tauri::{AppHandle, Emitter, Manager, State};
 
 #[derive(Clone)]
 pub struct AppState {
@@ -1388,6 +1388,13 @@ pub struct SaveResult {
     pub files: Vec<String>,
 }
 
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SaveProgress {
+    pub done: usize,
+    pub total: usize,
+}
+
 fn decode_overlay(data_url: &str) -> Result<RgbaImage, String> {
     let b64 = data_url
         .split_once(',')
@@ -1449,6 +1456,7 @@ fn save_one(
 
 #[tauri::command]
 pub async fn save_all(
+    app: AppHandle,
     state: State<'_, AppState>,
     params: GenParams,
     out_dir: Option<String>,
@@ -1477,10 +1485,12 @@ pub async fn save_all(
         };
         std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
 
+        let total = positions.len();
         let mut files = Vec::new();
         for (i, &base) in positions.iter().enumerate() {
             let mut paths = save_one(&st, &params, &dir, i as u32, base, overlays.get(&(i as u32)))?;
             files.append(&mut paths);
+            let _ = app.emit("save-progress", SaveProgress { done: i + 1, total });
         }
 
         Ok(SaveResult {

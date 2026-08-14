@@ -503,6 +503,11 @@ export interface IndexEvent {
   percent: number | null;
 }
 
+export interface SaveProgress {
+  done: number;
+  total: number;
+}
+
 export const render = (params: GenParams, req: RenderReq) =>
   invoke<RenderOut>("render", { params, req });
 

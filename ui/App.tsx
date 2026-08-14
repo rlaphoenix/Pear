@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
+import { listen } from "@tauri-apps/api/event";
 import { type PreviewTabHandle } from "@/components/tabs/preview/PreviewTab";
 import { StatusBar } from "@/components/StatusBar";
 import { useAppSettings, useProject } from "@/state/AppState";
@@ -8,7 +9,7 @@ import { usePreview } from "@/state/PreviewContext";
 import { toast } from "@/lib/toast";
 import { useIndexingStatus } from "@/hooks/useIndexingStatus";
 import { cn } from "@/lib/utils";
-import { DEFAULT_SCRIPT, saveAll, TAB_IDS, type ComparisonIndex, type DataUrl, type SourceId, type TabId } from "@/lib/tauri";
+import { DEFAULT_SCRIPT, saveAll, TAB_IDS, type ComparisonIndex, type DataUrl, type SaveProgress, type SourceId, type TabId } from "@/lib/tauri";
 import { type PreviewMode } from "@/lib/preview";
 import { exportMarkup } from "@/lib/markup";
 import { useGenParams } from "@/hooks/useGenParams";
@@ -64,7 +65,7 @@ export default function App() {
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
-  const [, setSaving] = useState(false);
+  const [exportProgress, setExportProgress] = useState<SaveProgress | null>(null);
   const previewRef = useRef<PreviewTabHandle>(null);
 
   const sources = settings.sources;
@@ -168,7 +169,7 @@ export default function App() {
       title: "Choose export folder",
     });
     if (typeof dir !== "string") return;
-    setSaving(true);
+    setExportProgress({ done: 0, total: comparisons.length });
     try {
       const overlays: Record<ComparisonIndex, DataUrl> = {};
       if (preview) {
@@ -179,14 +180,22 @@ export default function App() {
             overlays[k] = exportMarkup(st.annotations, canvasW, canvasH);
         });
       }
-      const res = await saveAll(params, dir, overlays, comparisons);
-      toast({ kind: "success", msg: `Exported ${res.files.length} images` });
+      await saveAll(params, dir, overlays, comparisons);
     } catch (e) {
       toast({ kind: "error", msg: `Export failed: ${String(e)}` });
     } finally {
-      setSaving(false);
+      setExportProgress(null);
     }
   }, [params, ready, preview, markup.markups, comparisons]);
+
+  useEffect(() => {
+    const un = listen<SaveProgress>("save-progress", (e) => {
+      setExportProgress(e.payload);
+    });
+    return () => {
+      void un.then((f) => f());
+    };
+  }, []);
 
   return (
     <div className="relative flex h-screen w-screen flex-col overflow-hidden">
@@ -232,6 +241,7 @@ export default function App() {
         previewError={previewError}
         markup={markup}
         onExport={onSave}
+        exportProgress={exportProgress}
         resize={resize}
         comparisons={comparisons}
         thumbs={thumbs}
