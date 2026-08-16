@@ -14,7 +14,7 @@ use std::io::Cursor;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Condvar, Mutex, OnceLock};
-use tauri::{AppHandle, Emitter, Manager, State};
+use tauri::{AppHandle, Emitter, State};
 
 #[derive(Clone)]
 pub struct AppState {
@@ -839,14 +839,14 @@ fn error_with_source(path: &str, err: String) -> String {
     format!("{}\n{}", basename(path), err)
 }
 
-fn stem(path: &str) -> String {
+pub(crate) fn stem(path: &str) -> String {
     Path::new(path)
         .file_stem()
         .map(|s| s.to_string_lossy().to_string())
         .unwrap_or_else(|| "source".into())
 }
 
-fn export_name(src: &SourceParams) -> String {
+pub(crate) fn export_name(src: &SourceParams) -> String {
     let cleaned: String = src
         .name
         .chars()
@@ -1407,14 +1407,12 @@ fn decode_overlay(data_url: &str) -> Result<RgbaImage, String> {
     Ok(img.to_rgba8())
 }
 
-fn save_one(
+pub(crate) fn render_position(
     st: &AppState,
     params: &GenParams,
-    dir: &Path,
-    num: u32,
     base: u64,
     overlay: Option<&String>,
-) -> Result<Vec<String>, String> {
+) -> Result<Vec<RgbaImage>, String> {
     let (infos, disp_dims, canvas, fill, fits) = plan(st, params)?;
     let (cw, ch) = canvas;
     let n = params.sources.len();
@@ -1440,12 +1438,28 @@ fn save_one(
         None => None,
     };
 
-    let num = format!("{:04}", num + 1);
-    let mut paths = Vec::with_capacity(composited.len());
-    for (i, (mut img, _meta)) in composited.into_iter().enumerate() {
+    let mut imgs = Vec::with_capacity(composited.len());
+    for (mut img, _meta) in composited.into_iter() {
         if let Some(ov) = &ov {
             image::imageops::overlay(&mut img, ov, 0, 0);
         }
+        imgs.push(img);
+    }
+    Ok(imgs)
+}
+
+fn save_one(
+    st: &AppState,
+    params: &GenParams,
+    dir: &Path,
+    num: u32,
+    base: u64,
+    overlay: Option<&String>,
+) -> Result<Vec<String>, String> {
+    let imgs = render_position(st, params, base, overlay)?;
+    let num = format!("{:04}", num + 1);
+    let mut paths = Vec::with_capacity(imgs.len());
+    for (i, img) in imgs.into_iter().enumerate() {
         let src = &params.sources[i];
         let path = dir.join(format!("{}_{}.png", num, export_name(src)));
         img.save(&path).map_err(|e| e.to_string())?;
@@ -1510,105 +1524,6 @@ pub fn clear_cache(state: State<'_, AppState>) {
     vapoursynth::clear_env_cache();
 }
 
-fn config_dir(app: &AppHandle) -> Result<PathBuf, String> {
-    app.path().app_config_dir().map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-pub fn load_prefs(app: AppHandle) -> Result<config::Prefs, String> {
-    Ok(config::load_prefs(&config_dir(&app)?))
-}
-
-#[tauri::command]
-pub fn save_templates(
-    app: AppHandle,
-    templates: Vec<config::ScriptTemplate>,
-) -> Result<(), String> {
-    let dir = config_dir(&app)?;
-    let mut prefs = config::load_prefs(&dir);
-    prefs.templates = templates;
-    config::save_prefs(&dir, &prefs)
-}
-
-#[derive(Debug, Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct RecentProject {
-    pub path: String,
-    pub name: String,
-    pub thumbnail: String,
-}
-
-#[tauri::command]
-pub fn recent_projects_meta(app: AppHandle) -> Result<Vec<RecentProject>, String> {
-    let paths = config::load_prefs(&config_dir(&app)?).recent_projects;
-    Ok(paths
-        .into_iter()
-        .map(|p| {
-            let cfg = config::load_project(&p).ok();
-            let name = cfg
-                .as_ref()
-                .map(|c| c.name.clone())
-                .filter(|n| !n.is_empty())
-                .unwrap_or_else(|| {
-                    Path::new(&p)
-                        .file_stem()
-                        .and_then(|s| s.to_str())
-                        .unwrap_or(&p)
-                        .to_string()
-                });
-            let thumbnail = cfg.map(|c| c.thumbnail).unwrap_or_default();
-            RecentProject { path: p, name, thumbnail }
-        })
-        .collect())
-}
-
-#[tauri::command]
-pub fn save_settings(
-    app: AppHandle,
-    default_count: u32,
-    min_distance: f64,
-    margin: config::MarginOpt,
-    frame_match: Option<String>,
-    ordered_comparisons: bool,
-    default_zoom: String,
-    pixel_perfect: bool,
-    zoom_algo: String,
-    fullscreen_mode: String,
-    fullscreen_includes: config::FullscreenIncludes,
-    info_box_position: String,
-    info_box_scale: f64,
-    weave_frames: u32,
-    watermark: bool,
-    preview_bg: serde_json::Value,
-    preview_border: serde_json::Value,
-    hwdevice: String,
-    hwfallback: bool,
-    check_for_updates: bool,
-) -> Result<(), String> {
-    let dir = config_dir(&app)?;
-    let mut prefs = config::load_prefs(&dir);
-    prefs.default_count = default_count;
-    prefs.min_distance = min_distance;
-    prefs.margin = margin;
-    prefs.r#match = frame_match;
-    prefs.ordered_comparisons = ordered_comparisons;
-    prefs.default_zoom = default_zoom;
-    prefs.pixel_perfect = pixel_perfect;
-    prefs.zoom_algo = zoom_algo;
-    prefs.fullscreen_mode = fullscreen_mode;
-    prefs.fullscreen_includes = fullscreen_includes;
-    prefs.info_box_position = info_box_position;
-    prefs.info_box_scale = info_box_scale;
-    prefs.weave_frames = weave_frames;
-    prefs.watermark = watermark;
-    prefs.preview_bg = preview_bg;
-    prefs.preview_border = preview_border;
-    prefs.hwdevice = hwdevice;
-    prefs.hwfallback = hwfallback;
-    prefs.check_for_updates = check_for_updates;
-    config::save_prefs(&dir, &prefs)
-}
-
 #[tauri::command]
 pub fn set_hwdevice(state: State<'_, AppState>, device: String) {
     vapoursynth::set_hwdevice(device);
@@ -1623,21 +1538,6 @@ pub fn set_hwfallback(state: State<'_, AppState>, on: bool) {
     state.type_cache.lock().unwrap().clear();
     state.probe_cache.lock().unwrap().clear();
     vapoursynth::clear_env_cache();
-}
-
-#[tauri::command]
-pub fn set_ui_state(
-    app: AppHandle,
-    last_tab: String,
-    preview_mode: String,
-    seek_base: u64,
-) -> Result<(), String> {
-    let dir = config_dir(&app)?;
-    let mut prefs = config::load_prefs(&dir);
-    prefs.last_tab = last_tab;
-    prefs.preview_mode = preview_mode;
-    prefs.seek_base = seek_base;
-    config::save_prefs(&dir, &prefs)
 }
 
 #[tauri::command]
@@ -1662,14 +1562,6 @@ pub fn toggle_devtools(window: tauri::WebviewWindow) {
     } else {
         window.open_devtools();
     }
-}
-
-#[tauri::command]
-pub fn set_last_project(app: AppHandle, path: String) -> Result<(), String> {
-    let dir = config_dir(&app)?;
-    let mut prefs = config::load_prefs(&dir);
-    prefs.last_project = path;
-    config::save_prefs(&dir, &prefs)
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -1714,18 +1606,6 @@ pub fn open_url(url: String) -> Result<(), String> {
 pub fn open_vapoursynth_folder() -> Result<(), String> {
     let dir = vapoursynth::root_dir().ok_or("VapourSynth was not found.")?;
     opener::open(&dir).map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-pub fn mark_recent(app: AppHandle, path: String) -> Result<(), String> {
-    config::push_recent(&config_dir(&app)?, &path);
-    Ok(())
-}
-
-#[tauri::command]
-pub fn remove_recent(app: AppHandle, path: String) -> Result<(), String> {
-    config::remove_recent(&config_dir(&app)?, &path);
-    Ok(())
 }
 
 #[tauri::command]
@@ -1777,7 +1657,7 @@ pub fn save_project(
         }
     }
     state.with_project_write(Path::new(&path), || config::save_project(&path, &project))?;
-    config::push_recent(&config_dir(&app)?, &path);
+    config::push_recent(&config::directory(&app)?, &path);
     Ok(())
 }
 

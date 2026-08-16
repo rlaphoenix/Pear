@@ -1,6 +1,11 @@
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+use tauri::{AppHandle, Manager};
+
+pub fn directory(app: &AppHandle) -> Result<PathBuf, String> {
+    app.path().app_config_dir().map_err(|e| e.to_string())
+}
 
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
 pub struct Crop {
@@ -417,31 +422,25 @@ fn prefs_path(dir: &PathBuf) -> PathBuf {
     dir.join("prefs.json")
 }
 
-pub fn load_prefs(dir: &PathBuf) -> Prefs {
+pub fn load(dir: &PathBuf) -> Prefs {
     match std::fs::read_to_string(prefs_path(dir)) {
         Ok(text) => serde_json::from_str(&text).unwrap_or_default(),
         Err(_) => Prefs::default(),
     }
 }
 
-pub fn save_prefs(dir: &PathBuf, prefs: &Prefs) -> Result<(), String> {
+pub fn save(dir: &PathBuf, prefs: &Prefs) -> Result<(), String> {
     std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
     let text = serde_json::to_string_pretty(prefs).map_err(|e| e.to_string())?;
     std::fs::write(prefs_path(dir), text).map_err(|e| e.to_string())
 }
 
 pub fn push_recent(dir: &PathBuf, path: &str) {
-    let mut prefs = load_prefs(dir);
+    let mut prefs = load(dir);
     prefs.recent_projects.retain(|p| p != path);
     prefs.recent_projects.insert(0, path.to_string());
     prefs.recent_projects.truncate(RECENTS_CAP);
-    let _ = save_prefs(dir, &prefs);
-}
-
-pub fn remove_recent(dir: &PathBuf, path: &str) {
-    let mut prefs = load_prefs(dir);
-    prefs.recent_projects.retain(|p| p != path);
-    let _ = save_prefs(dir, &prefs);
+    let _ = save(dir, &prefs);
 }
 
 const SETTINGS_ENTRY: &str = "settings.json";
@@ -510,4 +509,134 @@ pub fn save_project(path: &str, project: &Config) -> Result<(), String> {
         zip.finish().map_err(|e| e.to_string())?;
     }
     std::fs::rename(&tmp, path).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn load_prefs(app: AppHandle) -> Result<Prefs, String> {
+    Ok(load(&directory(&app)?))
+}
+
+#[tauri::command]
+pub fn save_templates(app: AppHandle, templates: Vec<ScriptTemplate>) -> Result<(), String> {
+    let dir = directory(&app)?;
+    let mut prefs = load(&dir);
+    prefs.templates = templates;
+    save(&dir, &prefs)
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RecentProject {
+    pub path: String,
+    pub name: String,
+    pub thumbnail: String,
+}
+
+#[tauri::command]
+pub fn recent_projects_meta(app: AppHandle) -> Result<Vec<RecentProject>, String> {
+    let paths = load(&directory(&app)?).recent_projects;
+    Ok(paths
+        .into_iter()
+        .map(|p| {
+            let cfg = load_project(&p).ok();
+            let name = cfg
+                .as_ref()
+                .map(|c| c.name.clone())
+                .filter(|n| !n.is_empty())
+                .unwrap_or_else(|| {
+                    Path::new(&p)
+                        .file_stem()
+                        .and_then(|s| s.to_str())
+                        .unwrap_or(&p)
+                        .to_string()
+                });
+            let thumbnail = cfg.map(|c| c.thumbnail).unwrap_or_default();
+            RecentProject { path: p, name, thumbnail }
+        })
+        .collect())
+}
+
+#[tauri::command]
+pub fn save_settings(
+    app: AppHandle,
+    default_count: u32,
+    min_distance: f64,
+    margin: MarginOpt,
+    frame_match: Option<String>,
+    ordered_comparisons: bool,
+    default_zoom: String,
+    pixel_perfect: bool,
+    zoom_algo: String,
+    fullscreen_mode: String,
+    fullscreen_includes: FullscreenIncludes,
+    info_box_position: String,
+    info_box_scale: f64,
+    weave_frames: u32,
+    watermark: bool,
+    preview_bg: serde_json::Value,
+    preview_border: serde_json::Value,
+    hwdevice: String,
+    hwfallback: bool,
+    check_for_updates: bool,
+) -> Result<(), String> {
+    let dir = directory(&app)?;
+    let mut prefs = load(&dir);
+    prefs.default_count = default_count;
+    prefs.min_distance = min_distance;
+    prefs.margin = margin;
+    prefs.r#match = frame_match;
+    prefs.ordered_comparisons = ordered_comparisons;
+    prefs.default_zoom = default_zoom;
+    prefs.pixel_perfect = pixel_perfect;
+    prefs.zoom_algo = zoom_algo;
+    prefs.fullscreen_mode = fullscreen_mode;
+    prefs.fullscreen_includes = fullscreen_includes;
+    prefs.info_box_position = info_box_position;
+    prefs.info_box_scale = info_box_scale;
+    prefs.weave_frames = weave_frames;
+    prefs.watermark = watermark;
+    prefs.preview_bg = preview_bg;
+    prefs.preview_border = preview_border;
+    prefs.hwdevice = hwdevice;
+    prefs.hwfallback = hwfallback;
+    prefs.check_for_updates = check_for_updates;
+    save(&dir, &prefs)
+}
+
+#[tauri::command]
+pub fn set_ui_state(
+    app: AppHandle,
+    last_tab: String,
+    preview_mode: String,
+    seek_base: u64,
+) -> Result<(), String> {
+    let dir = directory(&app)?;
+    let mut prefs = load(&dir);
+    prefs.last_tab = last_tab;
+    prefs.preview_mode = preview_mode;
+    prefs.seek_base = seek_base;
+    save(&dir, &prefs)
+}
+
+#[tauri::command]
+pub fn set_last_project(app: AppHandle, path: String) -> Result<(), String> {
+    let dir = directory(&app)?;
+    let mut prefs = load(&dir);
+    prefs.last_project = path;
+    save(&dir, &prefs)
+}
+
+#[tauri::command]
+pub fn mark_recent(app: AppHandle, path: String) -> Result<(), String> {
+    push_recent(&directory(&app)?, &path);
+    Ok(())
+}
+
+#[tauri::command]
+pub fn remove_recent(app: AppHandle, path: String) -> Result<(), String> {
+    let dir = directory(&app)?;
+    let mut prefs = load(&dir);
+    prefs.recent_projects.retain(|p| p != &path);
+    let _ = save(&dir, &prefs);
+    Ok(())
 }
