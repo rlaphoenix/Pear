@@ -172,6 +172,11 @@ function useSettings() {
     hwdevice: "",
     hwfallback: true,
     checkForUpdates: true,
+    expirationEnabled: true,
+    expirationDays: 90,
+    expirationType: "from_last_access",
+    compPicsApiKey: "",
+    slowpicsCookie: "",
   });
   const [restoreUi, setRestoreUi] = useState<{
     tab: string;
@@ -237,6 +242,11 @@ function useSettings() {
           hwdevice: (prefs.hwdevice ?? "") as AppSettings["hwdevice"],
           hwfallback: prefs.hwfallback ?? true,
           checkForUpdates: prefs.checkForUpdates ?? true,
+          expirationEnabled: prefs.expirationEnabled ?? true,
+          expirationDays: prefs.expirationDays ?? 90,
+          expirationType: prefs.expirationType ?? "from_last_access",
+          compPicsApiKey: prefs.compPicsApiKey ?? "",
+          slowpicsCookie: prefs.slowpicsCookie ?? "",
         });
         void setHwdevice((prefs.hwdevice ?? "") as AppSettings["hwdevice"]);
         void setHwfallback(prefs.hwfallback ?? true);
@@ -716,6 +726,7 @@ function useSettings() {
     recents,
     projectPath,
     projectName,
+    setProjectName,
     dirty,
     appSettings,
     saveAppSettings,

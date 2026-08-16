@@ -1,5 +1,5 @@
 import { type ReactNode } from "react";
-import { ImageDown, ImageOff, Loader2 } from "lucide-react";
+import { ImageDown, ImageOff, Loader2, Share2 } from "lucide-react";
 import { cn, splitSourceError, frameToCanvas, canvasToBlob } from "@/lib/utils";
 import { renderMarkup } from "@/lib/markup";
 import { useZoom } from "@/hooks/useZoom";
@@ -22,6 +22,7 @@ type Props = {
   previewError: string | null;
   markup: ReturnType<typeof useMarkup>;
   onExport: () => void;
+  onShare: () => void;
   exportProgress: SaveProgress | null;
   resize: ReturnType<typeof useComparisonsResize>;
   framestripHidden: boolean;
@@ -42,6 +43,7 @@ export function ExportTab({
   previewError,
   markup,
   onExport,
+  onShare,
   exportProgress,
   resize,
   framestripHidden,
@@ -125,7 +127,7 @@ export function ExportTab({
             {exportProgress !== null ? (
               <>
                 <Loader2 className="size-3.5 animate-spin" />
-                Exporting...{" "}
+                Export...{" "}
                 {String(
                   exportProgress.total > 0
                     ? Math.round((exportProgress.done / exportProgress.total) * 100)
@@ -136,9 +138,18 @@ export function ExportTab({
             ) : (
               <>
                 <ImageDown className="size-3.5" />
-                Export Images
+                Export
               </>
             )}
+          </button>
+          <button
+            type="button"
+            onClick={onShare}
+            title="Share the comparison to comp.pics"
+            className="flex shrink-0 items-center gap-1.5 border-l border-border bg-panel px-6 text-xs font-semibold text-foreground/90 outline-none transition-colors hover:bg-accent"
+          >
+            <Share2 className="size-3.5" />
+            Share
           </button>
         </div>
 

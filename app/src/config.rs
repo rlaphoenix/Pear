@@ -50,6 +50,14 @@ fn default_weave_frames() -> u32 {
     1
 }
 
+fn default_expiration_days() -> u32 {
+    90
+}
+
+fn default_expiration_type() -> String {
+    "from_last_access".to_string()
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MarginOpt {
@@ -144,6 +152,18 @@ pub struct Prefs {
     pub seek_base: u64,
     #[serde(default)]
     pub last_project: String,
+    #[serde(default = "default_true")]
+    pub expiration_enabled: bool,
+    #[serde(default = "default_expiration_days")]
+    pub expiration_days: u32,
+    #[serde(default = "default_expiration_type")]
+    pub expiration_type: String,
+    #[serde(default)]
+    pub comp_pics_api_key: String,
+    #[serde(default)]
+    pub slowpics_cookie: String,
+    #[serde(default)]
+    pub slowpics_browser_id: String,
 }
 
 impl Default for Prefs {
@@ -174,6 +194,12 @@ impl Default for Prefs {
             preview_mode: default_preview_mode(),
             seek_base: 0,
             last_project: String::new(),
+            expiration_enabled: true,
+            expiration_days: default_expiration_days(),
+            expiration_type: default_expiration_type(),
+            comp_pics_api_key: String::new(),
+            slowpics_cookie: String::new(),
+            slowpics_browser_id: String::new(),
         }
     }
 }
@@ -253,6 +279,11 @@ pub fn save_settings(
     hwdevice: String,
     hwfallback: bool,
     check_for_updates: bool,
+    expiration_enabled: bool,
+    expiration_days: u32,
+    expiration_type: String,
+    comp_pics_api_key: String,
+    slowpics_cookie: String,
 ) -> Result<(), String> {
     update(&app, |prefs| {
         prefs.default_count = default_count;
@@ -274,6 +305,11 @@ pub fn save_settings(
         prefs.hwdevice = hwdevice;
         prefs.hwfallback = hwfallback;
         prefs.check_for_updates = check_for_updates;
+        prefs.expiration_enabled = expiration_enabled;
+        prefs.expiration_days = expiration_days;
+        prefs.expiration_type = expiration_type;
+        prefs.comp_pics_api_key = comp_pics_api_key;
+        prefs.slowpics_cookie = slowpics_cookie;
     })
 }
 

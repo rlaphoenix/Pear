@@ -441,6 +441,11 @@ export interface Prefs {
   previewMode: string;
   seekBase: number;
   lastProject: string;
+  expirationEnabled: boolean;
+  expirationDays: number;
+  expirationType: ExpirationType;
+  compPicsApiKey: string;
+  slowpicsCookie: string;
 }
 
 export interface AppSettings {
@@ -464,6 +469,11 @@ export interface AppSettings {
   hwdevice: HwDevice;
   hwfallback: boolean;
   checkForUpdates: boolean;
+  expirationEnabled: boolean;
+  expirationDays: number;
+  expirationType: ExpirationType;
+  compPicsApiKey: string;
+  slowpicsCookie: string;
 }
 
 export interface ProbedSource {
@@ -541,6 +551,48 @@ export const saveAll = (
   positions: number[],
 ) => invoke<SaveResult>("save_all", { params, outDir, overlays, positions });
 
+export type ExpirationType = "from_last_access" | "from_creation";
+export type Provider = "comppics" | "slowpics";
+
+export interface TmdbTitle {
+  mediaType: "movie" | "tv";
+  id: number;
+  name: string;
+  year: number | null;
+}
+
+export interface UploadOpts {
+  provider: Provider;
+  name: string;
+  tags: string[];
+  expireDays: number | null;
+  expirationType: ExpirationType;
+  title: TmdbTitle | null;
+  visibility: boolean;
+  nsfw: boolean;
+}
+
+export const searchTitles = (query: string) =>
+  invoke<TmdbTitle[]>("search_titles", { query });
+
+export interface TagOption {
+  label: string;
+  value: string;
+  synonyms: string[];
+}
+
+export const listTags = () => invoke<TagOption[]>("list_tags");
+
+export const autofillTags = (name: string) =>
+  invoke<TagOption[]>("autofill_tags", { name });
+
+export const uploadComparison = (
+  params: GenParams,
+  overlays: Record<ComparisonIndex, DataUrl>,
+  positions: number[],
+  opts: UploadOpts,
+) => invoke<string>("upload_comparison", { params, overlays, positions, opts });
+
 export const clearCache = () => invoke<void>("clear_cache");
 
 export const discardIndexes = (paths: string[]) => invoke<void>("discard_indexes", { paths });
@@ -573,6 +625,11 @@ export const saveSettings = (s: AppSettings) =>
     hwdevice: s.hwdevice,
     hwfallback: s.hwfallback,
     checkForUpdates: s.checkForUpdates,
+    expirationEnabled: s.expirationEnabled,
+    expirationDays: s.expirationDays,
+    expirationType: s.expirationType,
+    compPicsApiKey: s.compPicsApiKey,
+    slowpicsCookie: s.slowpicsCookie,
   });
 
 export const setHwdevice = (device: HwDevice) => invoke<void>("set_hwdevice", { device });
