@@ -1,5 +1,6 @@
 import { type Dispatch, type SetStateAction } from "react";
 import { SettingsModal } from "@/components/modals/SettingsModal";
+import { ShareModal } from "@/components/modals/ShareModal";
 import { AboutModal } from "@/components/modals/AboutModal";
 import { UpdateModal } from "@/components/modals/UpdateModal";
 import { CloseProjectModal } from "@/components/modals/CloseProjectModal";
@@ -7,7 +8,7 @@ import { QuitAppModal } from "@/components/modals/QuitAppModal";
 import { NameProjectModal } from "@/components/modals/NameProjectModal";
 import { MissingSourcesModal } from "@/components/modals/MissingSourcesModal";
 import { SourceMismatchModal } from "@/components/modals/SourceMismatchModal";
-import { openUrl, type AppSettings } from "@/lib/tauri";
+import { openUrl, type AppSettings, type UploadOpts } from "@/lib/tauri";
 import { toast } from "@/lib/toast";
 import { type useUpdateCheck } from "@/hooks/useUpdateCheck";
 import { type useProjectLifecycle } from "@/hooks/useProjectLifecycle";
@@ -20,6 +21,9 @@ type Props = {
   saveAppSettings: (next: AppSettings) => unknown;
   aboutOpen: boolean;
   setAboutOpen: Dispatch<SetStateAction<boolean>>;
+  shareOpen: boolean;
+  setShareOpen: Dispatch<SetStateAction<boolean>>;
+  onUpload: (opts: UploadOpts) => Promise<string>;
   update: ReturnType<typeof useUpdateCheck>;
   lifecycle: ReturnType<typeof useProjectLifecycle>;
   projectOpen: ReturnType<typeof useProjectOpen>;
@@ -32,6 +36,9 @@ export function Modals({
   saveAppSettings,
   aboutOpen,
   setAboutOpen,
+  shareOpen,
+  setShareOpen,
+  onUpload,
   update,
   lifecycle,
   projectOpen,
@@ -51,6 +58,8 @@ export function Modals({
       )}
 
       {aboutOpen && <AboutModal onClose={() => setAboutOpen(false)} />}
+
+      {shareOpen && <ShareModal upload={onUpload} onClose={() => setShareOpen(false)} />}
 
       {update.updateModalOpen && upd && (
         <UpdateModal

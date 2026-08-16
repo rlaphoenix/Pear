@@ -49,6 +49,7 @@ type Props = {
   previewError: string | null;
   markup: ReturnType<typeof useMarkup>;
   onExport: () => void;
+  onShare: () => void;
   exportProgress: SaveProgress | null;
   resize: ReturnType<typeof useComparisonsResize>;
   comparisons: number[];
@@ -87,6 +88,7 @@ export function Tabs({
   previewError,
   markup,
   onExport,
+  onShare,
   exportProgress,
   resize,
   comparisons,
@@ -140,6 +142,7 @@ export function Tabs({
                 previewError={previewError}
                 markup={markup}
                 onExport={onExport}
+                onShare={onShare}
                 exportProgress={exportProgress}
                 resize={resize}
                 framestripHidden={fullscreen && !appSettings.fullscreenIncludes.framestrip}

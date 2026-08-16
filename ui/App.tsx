@@ -9,7 +9,7 @@ import { usePreview } from "@/state/PreviewContext";
 import { toast } from "@/lib/toast";
 import { useIndexingStatus } from "@/hooks/useIndexingStatus";
 import { cn } from "@/lib/utils";
-import { DEFAULT_SCRIPT, saveAll, TAB_IDS, type ComparisonIndex, type DataUrl, type SaveProgress, type SourceId, type TabId } from "@/lib/tauri";
+import { DEFAULT_SCRIPT, saveAll, uploadComparison, TAB_IDS, type ComparisonIndex, type DataUrl, type SaveProgress, type SourceId, type TabId, type UploadOpts } from "@/lib/tauri";
 import { type PreviewMode } from "@/lib/preview";
 import { exportMarkup } from "@/lib/markup";
 import { useGenParams } from "@/hooks/useGenParams";
@@ -65,6 +65,7 @@ export default function App() {
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const [exportProgress, setExportProgress] = useState<SaveProgress | null>(null);
   const previewRef = useRef<PreviewTabHandle>(null);
 
@@ -188,6 +189,24 @@ export default function App() {
     }
   }, [params, ready, preview, markup.markups, comparisons]);
 
+  const buildOverlays = useCallback((): Record<ComparisonIndex, DataUrl> => {
+    const overlays: Record<ComparisonIndex, DataUrl> = {};
+    if (preview) {
+      const { canvasW, canvasH } = preview;
+      comparisons.forEach((pos, k) => {
+        const st = markup.markups[pos];
+        if (st && st.annotations.length > 0)
+          overlays[k] = exportMarkup(st.annotations, canvasW, canvasH);
+      });
+    }
+    return overlays;
+  }, [preview, markup.markups, comparisons]);
+
+  const runUpload = useCallback(
+    (opts: UploadOpts) => uploadComparison(params, buildOverlays(), comparisons, opts),
+    [params, buildOverlays, comparisons],
+  );
+
   useEffect(() => {
     const un = listen<SaveProgress>("save-progress", (e) => {
       setExportProgress(e.payload);
@@ -241,6 +260,7 @@ export default function App() {
         previewError={previewError}
         markup={markup}
         onExport={onSave}
+        onShare={() => setShareOpen(true)}
         exportProgress={exportProgress}
         resize={resize}
         comparisons={comparisons}
@@ -264,6 +284,9 @@ export default function App() {
         saveAppSettings={saveAppSettings}
         aboutOpen={aboutOpen}
         setAboutOpen={setAboutOpen}
+        shareOpen={shareOpen}
+        setShareOpen={setShareOpen}
+        onUpload={runUpload}
         update={update}
         lifecycle={lifecycle}
         projectOpen={projectOpen}

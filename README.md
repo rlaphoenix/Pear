@@ -217,10 +217,14 @@ If you scroll all the way right on the list of comparisons, you will find a Add 
 wish to add more comparisons. A reminder as well that the Preview tab has a button to add what
 you are looking at as an exportable comparison (adding it to the end of the list).
 
-The Export Images button will save all of the created comparisons, including any markup, as PNG
-images wherever you would like. It saves them in a filename format that is supported by slow.pics
-batch mode, allowing you to just select and drag all the files into slow.pics. It automatically
-names the sources per-comparison to the names you set in the Sources tab for each source.
+The Export button will save all of the created comparisons, including any markup, as PNG images
+wherever you would like. It saves them in a filename format that is supported by slow.pics batch
+mode, allowing you to just select and drag all the files into slow.pics. It automatically names
+the sources per-comparison to the names you set in the Sources tab for each source.
+
+The Upload button allows you to upload the comparison images automatically to <https://slow.pics>
+or <https://comp.pics>, giving you a shareable link. Optionally, saving it under your account, or
+anonymously. Please see the documentation below on authenticating with your account.
 
 ### Timeline
 
@@ -287,6 +291,37 @@ the same file. You will be prompted if the hashes do not match, but you can skip
 
 A list of available shortcuts are available in the About menu.
 If you think a convenient shortcut is missing, suggest it.
+
+## Authenticating with slow.pics
+
+Slow.pics is a free, closed-source, image file host and comparer, with open registration.
+Authentication is handled by manually preparing a cookie and saving it to your Pear settings.
+
+1. Important: Open a *NEW* incognito/private window and log in to <https://slow.pics>.
+2. Open DevTools by pressing F12, click the `Application/Storage` tab, look for Cookies, select
+   `https://slow.pics`, and copy the full value of the `remember-me` cookie.
+3. Make some comparisons, click the Upload button, and select `slow.pics` as the provider.
+4. Paste the `remember-me` Cookie value into the Cookie field at the bottom of the form.
+5. Important: Close the incognito window without logging out, to keep the cookie alive.
+
+It is very important you do these steps on a NEW incognito/private window and do a fresh login.
+If you use the cookie of your existing login, then updates to the cookie value on your browser
+will interfere/break the cookie used by the Pear app, and vice-versa. Make sure you do NOT logout
+of the incognito window, or the cookie value you pasted into Pear will quickly become invalid.
+
+## Authenticating with comp.pics
+
+Comp.pics is a free, open-source, image file host and comparer, but registration is invite-only.
+Authentication is handled with an API Key generated on the website, saved to your Pear settings.
+The source code is available here: <https://github.com/thezak48/comps> (GPL-3.0).
+
+1. Login at <https://comp.pics/login>
+2. Head to your account page at <https://comp.pics/account>
+3. Scroll down to the API Keys section, write "Pear" into the input field, and click "Generate New Key".
+4. Make some comparisons, click the Upload button, and select `comp.pics` as the provider.
+5. Paste the API Key into the API Key field at the bottom of the form.
+
+The API Key will be saved and re-used in future uploads.
 
 ## Building
 

@@ -1,8 +1,11 @@
 mod commands;
+mod comp_pics;
 pub mod config;
 pub mod index;
 pub mod pipeline;
 pub mod projects;
+mod share;
+mod slow_pics;
 mod sys;
 pub mod vapoursynth;
 
@@ -108,6 +111,10 @@ pub fn run() {
             commands::release_frames,
             commands::pick_positions,
             commands::save_all,
+            share::upload_comparison,
+            slow_pics::search_titles,
+            slow_pics::list_tags,
+            slow_pics::autofill_tags,
             commands::clear_cache,
             config::load_prefs,
             config::save_templates,
@@ -117,6 +124,7 @@ pub fn run() {
             projects::recent_projects_meta,
             config::set_ui_state,
             config::set_last_project,
+            config::set_slowpics_cookie,
             commands::open_url,
             commands::open_vapoursynth_folder,
             commands::build_info,
