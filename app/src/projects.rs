@@ -361,8 +361,7 @@ pub fn save_project(
         }
     }
     state.with_project_write(Path::new(&path), || save(&path, &project))?;
-    config::push_recent(&config::directory(&app)?, &path);
-    Ok(())
+    config::push_recent(&app, &path)
 }
 
 #[tauri::command]
@@ -382,7 +381,7 @@ pub struct RecentProject {
 
 #[tauri::command]
 pub fn recent_projects_meta(app: AppHandle) -> Result<Vec<RecentProject>, String> {
-    let paths = config::load(&config::directory(&app)?).recent_projects;
+    let paths = config::load(&app).recent_projects;
     Ok(paths
         .into_iter()
         .map(|p| {

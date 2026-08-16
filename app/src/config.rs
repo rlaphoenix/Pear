@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use tauri::{AppHandle, Manager};
 
-pub fn directory(app: &AppHandle) -> Result<PathBuf, String> {
+fn directory(app: &AppHandle) -> Result<PathBuf, String> {
     app.path().app_config_dir().map_err(|e| e.to_string())
 }
 
@@ -22,21 +22,6 @@ fn default_min_distance() -> f64 {
 fn default_margin() -> f64 {
     0.02
 }
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct MarginOpt {
-    #[serde(default = "default_margin")]
-    pub start: f64,
-    #[serde(default = "default_margin")]
-    pub end: f64,
-}
-impl Default for MarginOpt {
-    fn default() -> Self {
-        MarginOpt { start: default_margin(), end: default_margin() }
-    }
-}
-
 fn default_true() -> bool {
     true
 }
@@ -63,6 +48,20 @@ fn default_info_scale() -> f64 {
 }
 fn default_weave_frames() -> u32 {
     1
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MarginOpt {
+    #[serde(default = "default_margin")]
+    pub start: f64,
+    #[serde(default = "default_margin")]
+    pub end: f64,
+}
+impl Default for MarginOpt {
+    fn default() -> Self {
+        MarginOpt { start: default_margin(), end: default_margin() }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -181,42 +180,55 @@ impl Default for Prefs {
 
 const RECENTS_CAP: usize = 12;
 
-fn prefs_path(dir: &PathBuf) -> PathBuf {
-    dir.join("prefs.json")
+fn prefs_path(app: &AppHandle) -> Result<PathBuf, String> {
+    Ok(directory(app)?.join("prefs.json"))
 }
 
-pub fn load(dir: &PathBuf) -> Prefs {
-    match std::fs::read_to_string(prefs_path(dir)) {
+pub fn load(app: &AppHandle) -> Prefs {
+    let Ok(path) = prefs_path(app) else {
+        return Prefs::default();
+    };
+    match std::fs::read_to_string(path) {
         Ok(text) => serde_json::from_str(&text).unwrap_or_default(),
         Err(_) => Prefs::default(),
     }
 }
 
-pub fn save(dir: &PathBuf, prefs: &Prefs) -> Result<(), String> {
-    std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
+pub fn save(app: &AppHandle, prefs: &Prefs) -> Result<(), String> {
+    let path = prefs_path(app)?;
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
     let text = serde_json::to_string_pretty(prefs).map_err(|e| e.to_string())?;
-    std::fs::write(prefs_path(dir), text).map_err(|e| e.to_string())
+    let mut tmp = path.clone().into_os_string();
+    tmp.push(".tmp");
+    let tmp = PathBuf::from(tmp);
+    std::fs::write(&tmp, text).map_err(|e| e.to_string())?;
+    std::fs::rename(&tmp, &path).map_err(|e| e.to_string())
 }
 
-pub fn push_recent(dir: &PathBuf, path: &str) {
-    let mut prefs = load(dir);
-    prefs.recent_projects.retain(|p| p != path);
-    prefs.recent_projects.insert(0, path.to_string());
-    prefs.recent_projects.truncate(RECENTS_CAP);
-    let _ = save(dir, &prefs);
+pub fn update(app: &AppHandle, f: impl FnOnce(&mut Prefs)) -> Result<(), String> {
+    let mut prefs = load(app);
+    f(&mut prefs);
+    save(app, &prefs)
+}
+
+pub fn push_recent(app: &AppHandle, path: &str) -> Result<(), String> {
+    update(app, |prefs| {
+        prefs.recent_projects.retain(|p| p != path);
+        prefs.recent_projects.insert(0, path.to_string());
+        prefs.recent_projects.truncate(RECENTS_CAP);
+    })
 }
 
 #[tauri::command]
 pub fn load_prefs(app: AppHandle) -> Result<Prefs, String> {
-    Ok(load(&directory(&app)?))
+    Ok(load(&app))
 }
 
 #[tauri::command]
 pub fn save_templates(app: AppHandle, templates: Vec<ScriptTemplate>) -> Result<(), String> {
-    let dir = directory(&app)?;
-    let mut prefs = load(&dir);
-    prefs.templates = templates;
-    save(&dir, &prefs)
+    update(&app, |prefs| prefs.templates = templates)
 }
 
 #[tauri::command]
@@ -242,28 +254,27 @@ pub fn save_settings(
     hwfallback: bool,
     check_for_updates: bool,
 ) -> Result<(), String> {
-    let dir = directory(&app)?;
-    let mut prefs = load(&dir);
-    prefs.default_count = default_count;
-    prefs.min_distance = min_distance;
-    prefs.margin = margin;
-    prefs.r#match = frame_match;
-    prefs.ordered_comparisons = ordered_comparisons;
-    prefs.default_zoom = default_zoom;
-    prefs.pixel_perfect = pixel_perfect;
-    prefs.zoom_algo = zoom_algo;
-    prefs.fullscreen_mode = fullscreen_mode;
-    prefs.fullscreen_includes = fullscreen_includes;
-    prefs.info_box_position = info_box_position;
-    prefs.info_box_scale = info_box_scale;
-    prefs.weave_frames = weave_frames;
-    prefs.watermark = watermark;
-    prefs.preview_bg = preview_bg;
-    prefs.preview_border = preview_border;
-    prefs.hwdevice = hwdevice;
-    prefs.hwfallback = hwfallback;
-    prefs.check_for_updates = check_for_updates;
-    save(&dir, &prefs)
+    update(&app, |prefs| {
+        prefs.default_count = default_count;
+        prefs.min_distance = min_distance;
+        prefs.margin = margin;
+        prefs.r#match = frame_match;
+        prefs.ordered_comparisons = ordered_comparisons;
+        prefs.default_zoom = default_zoom;
+        prefs.pixel_perfect = pixel_perfect;
+        prefs.zoom_algo = zoom_algo;
+        prefs.fullscreen_mode = fullscreen_mode;
+        prefs.fullscreen_includes = fullscreen_includes;
+        prefs.info_box_position = info_box_position;
+        prefs.info_box_scale = info_box_scale;
+        prefs.weave_frames = weave_frames;
+        prefs.watermark = watermark;
+        prefs.preview_bg = preview_bg;
+        prefs.preview_border = preview_border;
+        prefs.hwdevice = hwdevice;
+        prefs.hwfallback = hwfallback;
+        prefs.check_for_updates = check_for_updates;
+    })
 }
 
 #[tauri::command]
@@ -273,33 +284,24 @@ pub fn set_ui_state(
     preview_mode: String,
     seek_base: u64,
 ) -> Result<(), String> {
-    let dir = directory(&app)?;
-    let mut prefs = load(&dir);
-    prefs.last_tab = last_tab;
-    prefs.preview_mode = preview_mode;
-    prefs.seek_base = seek_base;
-    save(&dir, &prefs)
+    update(&app, |prefs| {
+        prefs.last_tab = last_tab;
+        prefs.preview_mode = preview_mode;
+        prefs.seek_base = seek_base;
+    })
 }
 
 #[tauri::command]
 pub fn set_last_project(app: AppHandle, path: String) -> Result<(), String> {
-    let dir = directory(&app)?;
-    let mut prefs = load(&dir);
-    prefs.last_project = path;
-    save(&dir, &prefs)
+    update(&app, |prefs| prefs.last_project = path)
 }
 
 #[tauri::command]
 pub fn mark_recent(app: AppHandle, path: String) -> Result<(), String> {
-    push_recent(&directory(&app)?, &path);
-    Ok(())
+    push_recent(&app, &path)
 }
 
 #[tauri::command]
 pub fn remove_recent(app: AppHandle, path: String) -> Result<(), String> {
-    let dir = directory(&app)?;
-    let mut prefs = load(&dir);
-    prefs.recent_projects.retain(|p| p != &path);
-    let _ = save(&dir, &prefs);
-    Ok(())
+    update(&app, |prefs| prefs.recent_projects.retain(|p| p != &path))
 }
