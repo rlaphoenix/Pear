@@ -1,4 +1,4 @@
-use crate::config::Crop;
+use crate::projects::Crop;
 use crate::vapoursynth::Fit;
 use ab_glyph::{Font, FontVec, PxScale, ScaleFont};
 use image::imageops::FilterType;

@@ -1,4 +1,4 @@
-use crate::config::{self, Config, Crop, Segment};
+use crate::projects::{Crop, Segment};
 use crate::pipeline::{self, ScaleOpts};
 use crate::vapoursynth::{self, SourceInfo};
 use ab_glyph::FontVec;
@@ -134,7 +134,7 @@ impl AppState {
 
     /// Run `write` with our own hold on `path` released, then reacquire it - because the
     /// deny-delete hold we keep on the open project would otherwise block our own rename-over.
-    fn with_project_write<F>(&self, path: &Path, write: F) -> Result<(), String>
+    pub(crate) fn with_project_write<F>(&self, path: &Path, write: F) -> Result<(), String>
     where
         F: FnOnce() -> Result<(), String>,
     {
@@ -1609,56 +1609,10 @@ pub fn open_vapoursynth_folder() -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn load_project(path: String) -> Result<Config, String> {
-    config::load_project(&path)
-}
-
-#[tauri::command]
 pub fn discard_indexes(paths: Vec<String>) {
     for p in paths {
         vapoursynth::remove_source_indexes(&p);
     }
-}
-
-fn now_secs() -> u64 {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|d| d.as_secs())
-        .unwrap_or(0)
-}
-
-#[tauri::command]
-pub fn save_project(
-    app: AppHandle,
-    state: State<'_, AppState>,
-    path: String,
-    mut project: Config,
-) -> Result<(), String> {
-    let now = now_secs();
-    let existing = config::load_project(&path).ok();
-    project.modified = now;
-    if project.created == 0 {
-        project.created = existing
-            .as_ref()
-            .map(|e| e.created)
-            .filter(|c| *c != 0)
-            .unwrap_or(now);
-    }
-    if project.version.is_empty() {
-        project.version = existing
-            .as_ref()
-            .map(|e| e.version.clone())
-            .filter(|v| !v.is_empty())
-            .unwrap_or_else(|| env!("CARGO_PKG_VERSION").to_string());
-    }
-    if project.thumbnail.is_empty() {
-        if let Some(e) = existing.as_ref() {
-            project.thumbnail = e.thumbnail.clone();
-        }
-    }
-    state.with_project_write(Path::new(&path), || config::save_project(&path, &project))?;
-    config::push_recent(&config::directory(&app)?, &path);
-    Ok(())
 }
 
 #[tauri::command]
@@ -1673,11 +1627,4 @@ pub fn is_portable() -> bool {
         .and_then(|exe| exe.parent().map(|dir| dir.join("uninstall.exe")))
         .map(|uninstaller| !uninstaller.exists())
         .unwrap_or(true)
-}
-
-#[tauri::command]
-pub async fn file_id(path: String) -> Result<config::FileId, String> {
-    tauri::async_runtime::spawn_blocking(move || config::file_id(&path))
-        .await
-        .map_err(|e| e.to_string())?
 }

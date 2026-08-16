@@ -1198,7 +1198,7 @@ fn source_key(path: &str) -> String {
     if let Some(k) = cache.lock().unwrap().get(path) {
         return k.clone();
     }
-    let key = crate::config::file_id(path).map(|f| f.id).unwrap_or_else(|_| {
+    let key = crate::projects::identity(path).map(|f| f.id).unwrap_or_else(|_| {
         use std::hash::{Hash, Hasher};
         let mut h = std::collections::hash_map::DefaultHasher::new();
         path.hash(&mut h);

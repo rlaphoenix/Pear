@@ -2,6 +2,7 @@ mod commands;
 pub mod config;
 pub mod index;
 pub mod pipeline;
+pub mod projects;
 mod sys;
 pub mod vapoursynth;
 
@@ -113,7 +114,7 @@ pub fn run() {
             config::save_settings,
             commands::set_hwdevice,
             commands::set_hwfallback,
-            config::recent_projects_meta,
+            projects::recent_projects_meta,
             config::set_ui_state,
             config::set_last_project,
             commands::open_url,
@@ -123,14 +124,14 @@ pub fn run() {
             config::mark_recent,
             config::remove_recent,
             commands::take_pending_project,
-            commands::load_project,
-            commands::save_project,
+            projects::load_project,
+            projects::save_project,
             commands::lock_project,
             commands::unlock_project,
             commands::toggle_devtools,
             commands::discard_indexes,
             commands::file_exists,
-            commands::file_id,
+            projects::file_id,
             commands::is_portable,
         ])
         .run(tauri::generate_context!())
