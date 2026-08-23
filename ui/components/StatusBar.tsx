@@ -11,10 +11,6 @@ function fmtBytes(n: number): string {
   return `${(mb / 1024).toFixed(2)} GB`;
 }
 
-function Sep() {
-  return <span className="text-border">|</span>;
-}
-
 function Item({ label, value, title }: { label: string; value: ReactNode; title?: string }) {
   return (
     <div className="flex items-baseline gap-1.5 whitespace-nowrap" title={title}>
@@ -108,20 +104,16 @@ export function StatusBar({ className }: { className?: string }) {
         <span className="text-foreground/80">{state}</span>
       </div>
 
-      <Sep />
       <Item label="VapourSynth" value={vsValue} />
 
-      <Sep />
       <Item
         label="Hardware Device"
         value={st?.hwdevice ?? "-"}
         title="Hardware decode device (CPU = software)"
       />
 
-      <Sep />
       <Item label="Decoder" value={st?.decoder ?? "-"} title="Source decoder" />
 
-      <Sep />
       <Item label="Threads" value={st?.threads || "-"} title="VapourSynth worker threads" />
 
       <div
@@ -144,7 +136,6 @@ export function StatusBar({ className }: { className?: string }) {
         )}
       </div>
 
-      <Sep />
       <div
         className="flex items-center gap-1.5 whitespace-nowrap"
         title="Raw-frame transport staging: RGBA bytes held for the current preview render (superseded renders are freed)"
