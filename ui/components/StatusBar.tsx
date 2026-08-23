@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { vsStatus, type VsStatus } from "@/lib/tauri";
+import { useAppSettings } from "@/state/AppState";
 
 const POLL_MS = 100;
 
@@ -21,6 +22,7 @@ function Item({ label, value, title }: { label: string; value: ReactNode; title?
 }
 
 export function StatusBar({ className }: { className?: string }) {
+  const { buildInfo } = useAppSettings();
   const [st, setSt] = useState<VsStatus | null>(null);
   const [err, setErr] = useState(false);
   const pending = useRef(false);
@@ -59,13 +61,9 @@ export function StatusBar({ className }: { className?: string }) {
     : st?.state === "Rendering"
       ? `Processing (${st.active})`
       : (st?.state ?? "Idle");
-  const vsValue = !st
-    ? "-"
-    : !st.ready
-      ? "not found"
-      : st.version
-        ? `${st.version}${st.api ? ` API ${st.api}` : ""}`
-        : "-";
+  const decoderValue = st?.decoder
+    ? `${st.decoder}${buildInfo ? ` ${buildInfo.bestsource}` : ""}`
+    : "-";
   const dotClass = err
     ? "bg-destructive"
     : st?.state === "Rendering"
@@ -104,7 +102,7 @@ export function StatusBar({ className }: { className?: string }) {
         <span className="text-foreground/80">{state}</span>
       </div>
 
-      <Item label="VapourSynth" value={vsValue} />
+      <Item label="VapourSynth" value={buildInfo?.vapoursynth ?? "-"} />
 
       <Item
         label="Hardware Device"
@@ -112,7 +110,7 @@ export function StatusBar({ className }: { className?: string }) {
         title="Hardware decode device (CPU = software)"
       />
 
-      <Item label="Decoder" value={st?.decoder ?? "-"} title="Source decoder" />
+      <Item label="Decoder" value={decoderValue} title="Source decoder" />
 
       <Item label="Threads" value={st?.threads || "-"} title="VapourSynth worker threads" />
 
