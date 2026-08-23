@@ -1,10 +1,13 @@
 import { lazy, Suspense, useState } from "react";
-import { Check, FileCode2, Save, X } from "lucide-react";
+import { Check, CircleHelp, FileCode2, Save, X } from "lucide-react";
 import { Button } from "@/components/primitives/button";
 import { Input } from "@/components/primitives/input";
 import { Select } from "@/components/primitives/select";
 import { SubLabel } from "@/components/tabs/sources/SubLabel";
+import { openUrl } from "@/lib/tauri";
 import { useProject } from "@/state/AppState";
+
+const GUIDE_URL = "https://www.vapoursynth.com/doc/gettingstarted.html";
 
 const CodeEditor = lazy(() =>
   import("@/components/tabs/editor/CodeEditor").then((m) => ({ default: m.CodeEditor })),
@@ -41,8 +44,16 @@ export function SourceEditor({
   return (
     <div className="flex h-full flex-col">
       <div className="flex h-9 shrink-0 items-stretch justify-between bg-[#0b0b0e]">
-        <div className="flex items-center">
+        <div className="flex items-center gap-1.5">
           <SubLabel icon={<FileCode2 className="size-3" />}>Editor</SubLabel>
+          <button
+            type="button"
+            onClick={() => void openUrl(GUIDE_URL).catch(() => {})}
+            title="VapourSynth scripting guide"
+            className="text-muted-foreground/60 outline-none transition-colors hover:text-foreground"
+          >
+            <CircleHelp className="size-3.5" />
+          </button>
         </div>
         {naming ? (
           <div className="flex items-center gap-1 pr-1 pl-2">
