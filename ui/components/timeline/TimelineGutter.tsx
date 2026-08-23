@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { SourceBadge } from "@/components/SourceBadge";
 import type { UiSource } from "@/state/AppState";
 import { LANE_H, RULER_H, trackLabel } from "@/lib/timeline";
 
@@ -26,19 +27,17 @@ export function TimelineGutter({
       {sources.map((source, idx) => {
         const hasLabel = !!trackLabel(source);
         const label = labels[idx];
-        const tag = String.fromCharCode(65 + idx);
         return (
           <div
             key={source.id}
             style={{ height: LANE_H }}
             className="flex items-center gap-2 border-b border-border/60 pl-2 pr-[18px]"
           >
-            <span
+            <SourceBadge
               ref={idx === 0 ? abRef : undefined}
-              className="font-mono text-[11px] font-semibold text-foreground/80"
-            >
-              {tag}
-            </span>
+              index={idx}
+              className="text-[11px] text-foreground/80"
+            />
             <span
               ref={idx === 0 ? labelRef : undefined}
               className={cn(

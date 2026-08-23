@@ -130,7 +130,7 @@ export const PreviewTab = forwardRef<PreviewTabHandle, Props>(function PreviewTa
           onTogglePlay={togglePlay}
           tracks={sources.map((s, i) => ({
             id: s.id,
-            letter: String.fromCharCode(65 + i),
+            index: i,
             segments: s.segments,
             fps: s.info?.fps ?? 25,
           }))}

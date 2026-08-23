@@ -3,6 +3,7 @@ import { CircleCheckBig, Copy, ExternalLink, GripVertical, HelpCircle, Loader2, 
 import { QRCodeSVG } from "qrcode.react";
 import { listen } from "@tauri-apps/api/event";
 import { cn } from "@/lib/utils";
+import { SourceBadge } from "@/components/SourceBadge";
 import { Modal } from "@/components/primitives/modal";
 import { Button } from "@/components/primitives/button";
 import { Input } from "@/components/primitives/input";
@@ -291,9 +292,7 @@ export function ShareModal({ upload, onClose }: Props) {
                         >
                           <GripVertical className="size-3.5" />
                         </button>
-                        <span className="w-4 shrink-0 text-center font-mono text-xs font-semibold text-muted-foreground">
-                          {String.fromCharCode(65 + i)}
-                        </span>
+                        <SourceBadge index={i} className="text-xs text-muted-foreground" />
                         <Input
                           value={s.name}
                           onChange={(e) => setSourceName(s.id, e.target.value)}

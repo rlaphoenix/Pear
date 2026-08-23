@@ -1,45 +1,30 @@
-import { lazy, Suspense, useEffect, useState } from "react";
-import { Check, Save, X } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { lazy, Suspense, useState } from "react";
+import { Check, FileCode2, Save, X } from "lucide-react";
 import { Button } from "@/components/primitives/button";
 import { Input } from "@/components/primitives/input";
 import { Select } from "@/components/primitives/select";
-import type { UiSource } from "@/state/AppState";
+import { SubLabel } from "@/components/tabs/sources/SubLabel";
 import { useProject } from "@/state/AppState";
 
 const CodeEditor = lazy(() =>
   import("@/components/tabs/editor/CodeEditor").then((m) => ({ default: m.CodeEditor })),
 );
 
-interface Props {
+export function SourceEditor({
+  sourceId,
+  scriptFor,
+  setScript,
+}: {
+  sourceId: string;
   scriptFor: (id: string) => string;
   setScript: (id: string, s: string) => void;
-}
-
-const fileName = (s: UiSource) => s.name || s.path?.split(/[\\/]/).pop() || "no file";
-
-export function EditorTab({ scriptFor, setScript }: Props) {
-  const { settings, templates, saveTemplate } = useProject();
-  const sources = settings.sources;
-  const [selId, setSelId] = useState<string | null>(sources[0]?.id ?? null);
-  useEffect(() => {
-    if (!sources.some((s) => s.id === selId)) setSelId(sources[0]?.id ?? null);
-  }, [sources, selId]);
-  const selected = sources.find((s) => s.id === selId) ?? sources[0];
-
+}) {
+  const { templates, saveTemplate } = useProject();
   const [naming, setNaming] = useState(false);
   const [name, setName] = useState("");
 
-  if (!selected) {
-    return (
-      <div className="flex h-full items-center justify-center bg-panel text-sm text-muted-foreground/60">
-        No sources
-      </div>
-    );
-  }
-
-  const script = scriptFor(selected.id);
-  const onChange = (v: string) => setScript(selected.id, v);
+  const script = scriptFor(sourceId);
+  const onChange = (v: string) => setScript(sourceId, v);
 
   const templateOptions = [
     { value: "", label: templates.length ? "Load template…" : "No templates" },
@@ -54,30 +39,11 @@ export function EditorTab({ scriptFor, setScript }: Props) {
   };
 
   return (
-    <div className="flex h-full flex-col bg-panel">
-      <div className="flex h-9 shrink-0 items-stretch border-b border-border bg-[#0b0b0e]">
-        <div className="flex min-w-0 flex-1 items-stretch overflow-x-auto">
-          {sources.map((s) => {
-            const activeTab = s.id === selected.id;
-            return (
-              <button
-                key={s.id}
-                type="button"
-                onClick={() => setSelId(s.id)}
-                title={fileName(s)}
-                className={cn(
-                  "flex shrink-0 items-center whitespace-nowrap border-r border-border px-3 text-xs outline-none transition-colors",
-                  activeTab
-                    ? "bg-panel text-foreground"
-                    : "text-muted-foreground hover:text-foreground/80",
-                )}
-              >
-                {fileName(s)}
-              </button>
-            );
-          })}
+    <div className="flex h-full flex-col">
+      <div className="flex h-9 shrink-0 items-stretch justify-between bg-[#0b0b0e]">
+        <div className="flex items-center pl-3">
+          <SubLabel icon={<FileCode2 className="size-3" />}>Editor</SubLabel>
         </div>
-
         {naming ? (
           <div className="flex items-center gap-1 pr-1 pl-2">
             <Input

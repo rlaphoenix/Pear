@@ -12,7 +12,6 @@ import {
 
 export type Slot = {
   idx: number;
-  letter: string;
   origPath: string;
   path: string;
   storedId?: FileId;
@@ -122,7 +121,6 @@ export function useProjectOpen({ readProject, applyProject }: Options) {
           const ss = cfg.sources?.[p];
           return {
             idx,
-            letter: String.fromCharCode(65 + idx),
             origPath: p,
             path: p,
             storedId: ss?.id ? { size: ss.size, id: ss.id } : undefined,

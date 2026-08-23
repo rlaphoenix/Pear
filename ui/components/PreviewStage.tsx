@@ -1,6 +1,7 @@
 import { useRef, useState, type ReactNode } from "react";
 import { Check, Copy, GripVertical, ImagePlus, Loader2, Maximize2, Minimize2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { SourceBadge } from "@/components/SourceBadge";
 import { FrameCanvas } from "@/components/FrameCanvas";
 import { previewBgStyle, previewBorderStyle, zoomCss, type PreviewMode } from "@/lib/preview";
 import { Select } from "@/components/primitives/select";
@@ -180,9 +181,10 @@ export function PreviewStage({
                 style={{ imageRendering: rendering }}
               />
             </div>
-            <span className="pointer-events-none absolute left-1/2 top-2 z-10 -translate-x-1/2 bg-black/60 px-1.5 py-0.5 font-mono text-[11px] leading-none text-white/90">
-              {String.fromCharCode(65 + i)}
-            </span>
+            <SourceBadge
+              index={i}
+              className="pointer-events-none absolute left-1/2 top-2 z-10 -translate-x-1/2 bg-black/60 text-[13px] text-white/90"
+            />
           </div>
         ))
       ) : (

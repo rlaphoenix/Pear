@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { SourceBadge } from "@/components/SourceBadge";
 import { render, nextRenderSeq, type GenParams, type ProjectFrame, type DataUrl } from "@/lib/tauri";
 
 interface Props {
@@ -213,7 +214,6 @@ export function Filmstrip({
       {showBoxes && (
         <div className="flex h-full flex-col">
           {Array.from({ length: rows }, (_, r) => {
-            const letter = String.fromCharCode(65 + r);
             const rowThumbs = thumbs[r] ?? {};
             const rowActive = r === activeSource;
             return (
@@ -221,9 +221,7 @@ export function Filmstrip({
                 key={r}
                 className="flex min-h-0 flex-1 items-center justify-center gap-1 overflow-hidden px-3 py-2"
               >
-                <span className="w-3 shrink-0 text-center font-mono text-[10px] font-semibold text-muted-foreground/60">
-                  {letter}
-                </span>
+                <SourceBadge index={r} className="text-[10px] text-muted-foreground/60" />
                 {Array.from({ length: count }, (_, k) => {
                   const i = base - span + k;
                   const valid = i >= 0 && i <= maxBase;

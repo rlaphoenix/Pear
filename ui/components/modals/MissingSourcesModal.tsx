@@ -1,6 +1,7 @@
 import { type Dispatch, type SetStateAction } from "react";
 import { Modal } from "@/components/primitives/modal";
 import { Button } from "@/components/primitives/button";
+import { SourceBadge } from "@/components/SourceBadge";
 import { cn } from "@/lib/utils";
 import { type Config } from "@/lib/tauri";
 import { type OpenModal, type Slot } from "@/hooks/useProjectOpen";
@@ -40,7 +41,7 @@ export function MissingSourcesModal({ modal, setOpenModal, checkIds, pickReplace
         {modal.slots.map((s) => (
           <div key={s.idx} className="flex flex-col gap-1 border border-border bg-[#0d0d10] p-2.5">
             <div className="flex items-center gap-2">
-              <span className="font-mono text-xs font-semibold">{s.letter}</span>
+              <SourceBadge index={s.idx} className="text-xs" />
               <span
                 className={cn(
                   "text-[10px]",

@@ -10,6 +10,7 @@ import {
   SkipForward,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { SourceBadge } from "@/components/SourceBadge";
 import { clampNum, frameAt } from "@/lib/frames";
 import { Tooltip } from "@/components/primitives/tooltip";
 import type { Segment } from "@/lib/tauri";
@@ -69,7 +70,7 @@ const smpte = (segs: Segment[], fps: number, n: number) => {
 
 interface SeekTrack {
   id: string;
-  letter: string;
+  index: number;
   segments: Segment[];
   fps: number;
 }
@@ -182,8 +183,9 @@ export function Controls({
           >
             <div>{hover.n + 1}</div>
             {tracks.map((t) => (
-              <div key={t.id}>
-                {t.letter} {smpte(t.segments, t.fps, hover.n)}
+              <div key={t.id} className="flex items-center gap-1">
+                <SourceBadge index={t.index} className="text-[10px]" />
+                {smpte(t.segments, t.fps, hover.n)}
               </div>
             ))}
           </div>

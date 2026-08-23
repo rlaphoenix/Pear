@@ -1,13 +1,12 @@
 import { useCallback, useEffect, useState, type Dispatch, type SetStateAction } from "react";
 import {
   Copy,
-  FileCode2,
   Film,
   Heart,
   HelpCircle,
+  File,
   ImageDown,
   Minus,
-  MonitorPlay,
   Settings,
   Square,
   X,
@@ -63,9 +62,8 @@ export function TitleBar({
         </div>
       }
       tabs={[
-        { id: "sources", label: "Sources", icon: <Film className="size-4" />, disabled: !ready || initializing },
-        { id: "editor", label: "Editor", icon: <FileCode2 className="size-4" />, disabled: !ready || initializing },
-        { id: "preview", label: "Preview", icon: <MonitorPlay className="size-4" />, disabled: !ready || initializing },
+        { id: "sources", label: "Sources", icon: <File className="size-4" />, disabled: !ready || initializing },
+        { id: "preview", label: "Preview", icon: <Film className="size-4" />, disabled: !ready || initializing },
         { id: "export", label: "Export", icon: <ImageDown className="size-4" />, disabled: !ready || initializing },
       ]}
       right={

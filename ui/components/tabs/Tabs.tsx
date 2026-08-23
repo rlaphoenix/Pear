@@ -1,7 +1,6 @@
 import { type Dispatch, type RefObject, type SetStateAction } from "react";
 import { SourcesTab } from "@/components/tabs/sources/SourcesTab";
 import { PreviewTab, type PreviewTabHandle } from "@/components/tabs/preview/PreviewTab";
-import { EditorTab } from "@/components/tabs/editor/EditorTab";
 import { Timeline } from "@/components/Timeline";
 import { WelcomeView } from "@/components/views/WelcomeView";
 import { LoadingView } from "@/components/views/LoadingView";
@@ -114,11 +113,7 @@ export function Tabs({
         ) : (
           <>
             <div className={tab === "sources" ? "h-full" : "hidden"}>
-              <SourcesTab />
-            </div>
-
-            <div className={tab === "editor" ? "h-full" : "hidden"}>
-              <EditorTab
+              <SourcesTab
                 scriptFor={scriptFor}
                 setScript={(id, s) => setScripts((p) => ({ ...p, [id]: s }))}
               />

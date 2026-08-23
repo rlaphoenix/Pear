@@ -143,11 +143,7 @@ export function Timeline({ params, paramsKey, active }: Props) {
     if (!el) return;
     const cs = getComputedStyle(el);
     const font = `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
-    let abW = 9;
-    if (abRef.current) {
-      const a = getComputedStyle(abRef.current);
-      abW = measureText("A", `${a.fontStyle} ${a.fontWeight} ${a.fontSize} ${a.fontFamily}`);
-    }
+    const abW = abRef.current?.offsetWidth ?? 9;
     const labelW = Math.max(0, ...labelsKey.split("\n").map((l) => measureText(l, font)));
     const fixed = 8 + 14 + 8 + abW + 8 + 8 + 24 + 18;
     setMaxGutter(Math.max(GUTTER_MIN, Math.ceil(fixed + labelW) + 2));

@@ -1,5 +1,6 @@
 import { createPortal } from "react-dom";
 import { Copy, MoveHorizontal, Pencil, RotateCcw, Scissors, Trash2 } from "lucide-react";
+import { SourceBadge } from "@/components/SourceBadge";
 import type { Menu, Sel } from "@/lib/timeline";
 import type { TimelineEditing } from "@/hooks/useTimelineEditing";
 
@@ -24,7 +25,7 @@ export function SegmentContextMenu({
   const { segsOf, razorAt, alignStartTo, duplicateSeg, deleteSeg, setName } = edit;
   const seg = segsOf(menu.id)[menu.index];
   if (!seg) return null;
-  const menuTag = String.fromCharCode(65 + Math.max(0, sourceIds.indexOf(menu.id)));
+  const menuIdx = Math.max(0, sourceIds.indexOf(menu.id));
   const inside = base >= seg.pos && base < seg.pos + seg.len;
   const mx = Math.min(menu.x, window.innerWidth - 216);
   const my = Math.min(menu.y, window.innerHeight - 320);
@@ -63,9 +64,12 @@ export function SegmentContextMenu({
         className="fixed z-[96] min-w-[200px] border border-border bg-popover py-1 shadow-xl shadow-black/50"
         style={{ left: mx, top: my }}
       >
-        <div className="truncate px-3 py-1 font-mono text-[10px] text-muted-foreground/60">
-          {menuTag} · #{seg.src}–{seg.src + seg.len - 1}
-          {seg.name ? ` · ${seg.name}` : ""}
+        <div className="flex items-center gap-1 truncate px-3 py-1 font-mono text-[10px] text-muted-foreground/60">
+          <SourceBadge index={menuIdx} />
+          <span className="truncate">
+            · #{seg.src}–{seg.src + seg.len - 1}
+            {seg.name ? ` · ${seg.name}` : ""}
+          </span>
         </div>
         {item(<Pencil className="size-3.5" />, "Rename…", () =>
           setRenaming({ id: menu.id, index: menu.index }),

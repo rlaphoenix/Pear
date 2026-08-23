@@ -253,8 +253,8 @@ interface SourceParams {
   tempoFps: string;
 }
 
-export type TabId = "sources" | "editor" | "preview" | "export";
-export const TAB_IDS: TabId[] = ["sources", "editor", "preview", "export"];
+export type TabId = "sources" | "preview" | "export";
+export const TAB_IDS: TabId[] = ["sources", "preview", "export"];
 
 export const DEFAULT_SCRIPT = `# \`clip\` is this source, already loaded - transform it below.
 # \`SOURCE\` holds the file path if you need it.

@@ -1,6 +1,7 @@
 import { type Dispatch, type ReactElement, type SetStateAction } from "react";
 import { Modal } from "@/components/primitives/modal";
 import { Button } from "@/components/primitives/button";
+import { SourceBadge } from "@/components/SourceBadge";
 import { type Config } from "@/lib/tauri";
 import { type OpenModal, type Slot } from "@/hooks/useProjectOpen";
 
@@ -40,7 +41,7 @@ export function SourceMismatchModal({ modal, setOpenModal, finalizeOpen }: Props
                 className="flex flex-col gap-1 border border-destructive/40 bg-[#0d0d10] p-2.5"
               >
                 <div className="flex items-center gap-2">
-                  <span className="font-mono text-xs font-semibold">{s.letter}</span>
+                  <SourceBadge index={s.idx} className="text-xs" />
                   <span className="text-[10px] text-destructive">id mismatch</span>
                 </div>
                 <span className="truncate font-mono text-[10px] text-foreground/80" title={s.path}>
