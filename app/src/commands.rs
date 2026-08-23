@@ -1706,15 +1706,22 @@ pub struct BuildInfo {
     pub bestsource: String,
 }
 
-#[tauri::command]
-pub async fn build_info() -> Result<BuildInfo, String> {
-    tauri::async_runtime::spawn_blocking(|| BuildInfo {
+static BUILD_INFO: OnceLock<BuildInfo> = OnceLock::new();
+
+pub fn prime_build_info() {
+    let _ = BUILD_INFO.get_or_init(|| BuildInfo {
         app: env!("CARGO_PKG_VERSION").to_string(),
         vapoursynth: vapoursynth::core_version(),
         bestsource: vapoursynth::bestsource_version(),
-    })
-    .await
-    .map_err(|e| e.to_string())
+    });
+}
+
+#[tauri::command]
+pub fn build_info() -> BuildInfo {
+    BUILD_INFO
+        .get()
+        .expect("build_info queried before prime_build_info ran during setup")
+        .clone()
 }
 
 #[tauri::command]

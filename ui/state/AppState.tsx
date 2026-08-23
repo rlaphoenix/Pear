@@ -58,6 +58,8 @@ import {
   SourceInfo,
   FPS_PRESETS,
   ZERO_CROP,
+  buildInfo,
+  type BuildInfo,
 } from "@/lib/tauri";
 import { MEDIA_EXTS } from "@/lib/utils";
 import { defaultSegments } from "@/lib/frames";
@@ -199,6 +201,10 @@ function useSettings() {
     lastProject: "",
   });
   const [prefsReady, setPrefsReady] = useState(false);
+  const [buildInfoValue, setBuildInfoValue] = useState<BuildInfo | null>(null);
+  useEffect(() => {
+    void buildInfo().then(setBuildInfoValue);
+  }, []);
   const savedSnapshot = useRef<string | null>(null);
   const settingsRef = useRef(settings);
   const appSettingsRef = useRef(appSettings);
@@ -779,6 +785,7 @@ function useSettings() {
     restoreUi,
     saveUiState,
     prefsReady,
+    buildInfo: buildInfoValue,
     patch,
     pickSources,
     addSources,
@@ -976,8 +983,8 @@ function stableStringify(v: unknown): string {
 
 type UseSettings = ReturnType<typeof useSettings>;
 
-export type AppSettingsValue = Pick<UseSettings, "appSettings" | "saveAppSettings">;
-export type ProjectValue = Omit<UseSettings, "appSettings" | "saveAppSettings">;
+export type AppSettingsValue = Pick<UseSettings, "appSettings" | "saveAppSettings" | "buildInfo">;
+export type ProjectValue = Omit<UseSettings, "appSettings" | "saveAppSettings" | "buildInfo">;
 
 const SettingsContext = createContext<AppSettingsValue | null>(null);
 const ProjectContext = createContext<ProjectValue | null>(null);
@@ -985,8 +992,12 @@ const ProjectContext = createContext<ProjectValue | null>(null);
 export function AppStateProvider({ children }: { children: ReactNode }) {
   const all = useSettings();
   const settingsValue = useMemo<AppSettingsValue>(
-    () => ({ appSettings: all.appSettings, saveAppSettings: all.saveAppSettings }),
-    [all.appSettings, all.saveAppSettings],
+    () => ({
+      appSettings: all.appSettings,
+      saveAppSettings: all.saveAppSettings,
+      buildInfo: all.buildInfo,
+    }),
+    [all.appSettings, all.saveAppSettings, all.buildInfo],
   );
   return (
     <SettingsContext.Provider value={settingsValue}>

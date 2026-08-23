@@ -1,7 +1,8 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { type ReactNode } from "react";
 import { FolderOpen } from "lucide-react";
 import { Modal } from "@/components/primitives/modal";
-import { buildInfo, openUrl, openVapoursynthFolder, type BuildInfo } from "@/lib/tauri";
+import { openUrl, openVapoursynthFolder } from "@/lib/tauri";
+import { useAppSettings } from "@/state/AppState";
 
 const REPO = "https://github.com/rlaphoenix/pear";
 
@@ -61,12 +62,8 @@ function Link({ href, children }: { href: string; children: ReactNode }) {
 const GROUP_LABEL = "text-[11px] font-semibold uppercase tracking-wider text-muted-foreground";
 
 export function AboutModal({ onClose }: { onClose: () => void }) {
-  const [info, setInfo] = useState<BuildInfo | null>(null);
-  useEffect(() => {
-    void buildInfo()
-      .then(setInfo)
-      .catch(() => {});
-  }, []);
+  const { buildInfo: info } = useAppSettings();
+  if (!info) return null;
 
   const { engine, engineUrl } = (() => {
     const ua = navigator.userAgent;
@@ -83,10 +80,10 @@ export function AboutModal({ onClose }: { onClose: () => void }) {
 
   const versions: { name: string; ver: string; url: string }[] = [
     { name: "WebView", ver: engine, url: engineUrl },
-    { name: "VapourSynth", ver: info?.vapoursynth ?? "…", url: "http://www.vapoursynth.com" },
+    { name: "VapourSynth", ver: info.vapoursynth, url: "http://www.vapoursynth.com" },
     {
       name: "BestSource",
-      ver: info?.bestsource ?? "…",
+      ver: info.bestsource,
       url: "https://github.com/vapoursynth/bestsource",
     },
   ];
@@ -115,7 +112,7 @@ export function AboutModal({ onClose }: { onClose: () => void }) {
               <div className="flex items-center gap-2">
                 <div className="text-xl font-semibold leading-none text-foreground">Pear</div>
                 <span className="rounded-full border border-border bg-muted/40 px-2.5 py-1 font-mono text-sm leading-none text-foreground/80">
-                  {info?.app ? `v${info.app}` : "…"}
+                  v{info.app}
                 </span>
               </div>
               <div className="text-sm text-muted-foreground">

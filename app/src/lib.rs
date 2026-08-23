@@ -78,6 +78,7 @@ pub fn run() {
                 }
             }
             vapoursynth::prepare();
+            commands::prime_build_info();
             if sys::attach_console_if_present() {
                 // GPL-3.0 recommends a short notice when the program runs interactively (here,
                 // from a terminal). The GUI's own notice is the About box.
