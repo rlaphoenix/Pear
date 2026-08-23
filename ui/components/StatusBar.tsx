@@ -119,19 +119,15 @@ export function StatusBar({ className }: { className?: string }) {
         title="VapourSynth frame (framebuffer) cache: memory currently held vs the cap before it is reclaimed"
       >
         <span className="uppercase tracking-wider text-muted-foreground/60">Framebuffer</span>
-        {hasCache ? (
-          <>
-            <span className="font-mono text-foreground/80">{fmtBytes(st!.cacheUsed)}</span>
-            <span className="block h-1.5 w-16 overflow-hidden bg-muted">
-              <span
-                className="block h-full bg-primary/70 transition-[width] duration-500"
-                style={{ width: `${cachePct}%` }}
-              />
-            </span>
-          </>
-        ) : (
-          <span className="font-mono text-foreground/80">-</span>
-        )}
+        <span className="font-mono text-foreground/80">
+          {fmtBytes(hasCache ? st!.cacheUsed : 0)}
+        </span>
+        <span className="block h-1.5 w-16 overflow-hidden bg-muted">
+          <span
+            className="block h-full bg-primary/70 transition-[width] duration-500"
+            style={{ width: `${cachePct}%` }}
+          />
+        </span>
       </div>
 
       <div
