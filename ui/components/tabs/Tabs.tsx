@@ -159,14 +159,12 @@ export function Tabs({
         <div
           className={cn(
             "shrink-0",
-            fullscreen && !appSettings.fullscreenIncludes.timeline && "hidden",
+            (tab !== "preview" ||
+              (fullscreen && !appSettings.fullscreenIncludes.timeline)) &&
+              "hidden",
           )}
         >
-          <Timeline
-            params={params}
-            paramsKey={frameKey}
-            active={tab === "preview" || tab === "export"}
-          />
+          <Timeline params={params} paramsKey={frameKey} active={tab === "preview"} />
         </div>
       )}
 
