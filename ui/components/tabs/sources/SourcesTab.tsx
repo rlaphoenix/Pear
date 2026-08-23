@@ -51,12 +51,13 @@ const nameOf = (s: UiSource) => s.name || s.path?.split(/[\\/]/).pop() || "No so
 interface Props {
   scriptFor: (id: SourceId) => string;
   setScript: (id: SourceId, s: string) => void;
+  page: SourceId;
+  setPage: (id: SourceId) => void;
 }
 
-export function SourcesTab({ scriptFor, setScript }: Props) {
+export function SourcesTab({ scriptFor, setScript, page, setPage }: Props) {
   const { settings, pickSources, removeSource, reorderSources } = useProject();
   const sources = settings.sources;
-  const [page, setPage] = useState<string>(sources[0]?.id ?? "");
   const [spatialOpen, setSpatialOpen] = useState(false);
   const sourceIds = sources.map((s) => s.id);
   const deintKernelOptions = DEINT_KERNELS.map((a) => ({

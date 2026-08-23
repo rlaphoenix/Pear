@@ -19,6 +19,7 @@ import { useMarkup } from "@/hooks/useMarkup";
 import { useComparisonsResize } from "@/hooks/useComparisonsResize";
 import { useUpdateCheck } from "@/hooks/useUpdateCheck";
 import { useGlobalShortcuts } from "@/hooks/useGlobalShortcuts";
+import { useSourceShortcuts } from "@/hooks/useSourceShortcuts";
 import { useFullscreen } from "@/hooks/useFullscreen";
 import { useDragDrop } from "@/hooks/useDragDrop";
 import { useProjectOpen } from "@/hooks/useProjectOpen";
@@ -55,11 +56,13 @@ export default function App() {
     mode: previewMode,
     setMode: setPreviewMode,
     sourceIndex,
+    setSourceIndex,
     fullscreen,
     setFullscreen,
   } = usePreview();
 
   const [tab, setTab] = useState<TabId>("preview");
+  const [sourcePage, setSourcePage] = useState<SourceId>("");
   const [scripts, setScripts] = useState<Record<SourceId, string>>({});
   const scriptFor = useCallback((id: SourceId) => scripts[id] ?? DEFAULT_SCRIPT, [scripts]);
 
@@ -103,6 +106,13 @@ export default function App() {
   }, [prefsReady]);
 
   useGlobalShortcuts();
+  useSourceShortcuts({
+    tab,
+    sources,
+    readyCount: readySources.length,
+    setSourcePage,
+    setSourceIndex,
+  });
   useFullscreen({ fullscreen, setFullscreen, fullscreenMode: appSettings.fullscreenMode, tab });
   const dragOver = useDragDrop(addSources);
 
@@ -250,6 +260,8 @@ export default function App() {
         onAddCurrentComparison={onAddCurrentComparison}
         scriptFor={scriptFor}
         setScripts={setScripts}
+        sourcePage={sourcePage}
+        setSourcePage={setSourcePage}
         onAddSources={pickSources}
         onLoadProject={projectOpen.onLoadProject}
         recents={recents}

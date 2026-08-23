@@ -38,6 +38,8 @@ type Props = {
   onAddCurrentComparison: () => void;
   scriptFor: (id: SourceId) => string;
   setScripts: Dispatch<SetStateAction<Record<SourceId, string>>>;
+  sourcePage: SourceId;
+  setSourcePage: Dispatch<SetStateAction<SourceId>>;
   onAddSources: () => void;
   onLoadProject: () => void;
   recents: RecentProject[];
@@ -77,6 +79,8 @@ export function Tabs({
   onAddCurrentComparison,
   scriptFor,
   setScripts,
+  sourcePage,
+  setSourcePage,
   onAddSources,
   onLoadProject,
   recents,
@@ -116,6 +120,8 @@ export function Tabs({
               <SourcesTab
                 scriptFor={scriptFor}
                 setScript={(id, s) => setScripts((p) => ({ ...p, [id]: s }))}
+                page={sourcePage}
+                setPage={setSourcePage}
               />
             </div>
 
