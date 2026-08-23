@@ -7,6 +7,7 @@ import {
   Plus,
   Ratio,
   Tag,
+  Timer,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -20,6 +21,9 @@ import {
   DEINT_KERNELS,
   MATRICES,
   RANGES,
+  TEMPO_MODES,
+  DECIMATORS,
+  FPS_PRESETS,
   deintKernelLabel,
   type Algo,
   type Crop,
@@ -28,6 +32,8 @@ import {
   type MatrixSetting,
   type Range,
   type RangeSetting,
+  type TempoMode,
+  type TempoDecimator,
 } from "@/lib/tauri";
 import { type UiSource } from "@/state/AppState";
 import { useProject } from "@/state/AppState";
@@ -38,6 +44,7 @@ import { DynamicRangeField } from "@/components/tabs/sources/DynamicRangeField";
 const algoOptions = ALGOS.map((a) => ({ value: a, label: a }));
 
 const RESOLUTION_PAGE = "__resolution__";
+const TEMPORAL_PAGE = "__temporal__";
 
 const nameOf = (s: UiSource) => s.name || s.path?.split(/[\\/]/).pop() || "No source";
 
@@ -52,7 +59,8 @@ export function SourcesTab() {
   }));
 
   useEffect(() => {
-    if (page === RESOLUTION_PAGE || sources.some((s) => s.id === page)) return;
+    if (page === RESOLUTION_PAGE || page === TEMPORAL_PAGE || sources.some((s) => s.id === page))
+      return;
     setPage(sources[0]?.id ?? RESOLUTION_PAGE);
   }, [sources, page]);
 
@@ -139,11 +147,27 @@ export function SourcesTab() {
           <Maximize2 className="size-3.5" />
           Spatial alignment
         </button>
+
+        <button
+          type="button"
+          onClick={() => setPage(TEMPORAL_PAGE)}
+          className={cn(
+            "flex items-center gap-2 border-l-2 px-4 py-2 text-left text-sm outline-none transition-colors",
+            page === TEMPORAL_PAGE
+              ? "border-primary bg-accent/60 text-foreground"
+              : "border-transparent text-muted-foreground hover:text-foreground",
+          )}
+        >
+          <Timer className="size-3.5" />
+          Temporal alignment
+        </button>
       </nav>
 
       <div className="min-w-0 flex-1 overflow-y-auto p-5">
         {page === RESOLUTION_PAGE ? (
           <ResolutionPage />
+        ) : page === TEMPORAL_PAGE ? (
+          <TemporalPage />
         ) : selected ? (
           <SourcePage
             key={selected.id}
@@ -258,6 +282,85 @@ function SourcePage({
           className="h-8 text-xs"
         />
       </div>
+    </div>
+  );
+}
+
+const fmtFps = (v: number) => Number(v.toFixed(3)).toString();
+
+function TemporalRow({ source, index }: { source: UiSource; index: number }) {
+  const ctx = useProject();
+  const info = source.info;
+  const native = info?.nativeFps ?? 0;
+  const fpsList = source.tempoFps && !FPS_PRESETS.includes(source.tempoFps)
+    ? [source.tempoFps, ...FPS_PRESETS]
+    : FPS_PRESETS;
+  const fpsOptions = fpsList.map((f) => ({ value: f, label: `${f} fps` }));
+
+  const changed =
+    source.tempoMode !== "none" && info && fmtFps(info.fps) !== fmtFps(native);
+  const fpsText =
+    native > 0
+      ? changed
+        ? `${fmtFps(native)} → ${fmtFps(info!.fps)} fps`
+        : `${fmtFps(native)} fps`
+      : "—";
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-baseline gap-3">
+        <span className="font-mono text-sm font-semibold">{String.fromCharCode(65 + index)}</span>
+        <span className="min-w-0 flex-1 truncate text-sm text-foreground/90">{nameOf(source)}</span>
+        <span className="shrink-0 text-xs text-muted-foreground">{fpsText}</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <Select<TempoMode>
+          value={source.tempoMode}
+          options={TEMPO_MODES}
+          onValueChange={(v) => ctx.setTempoMode(source.id, v)}
+          className="h-8 min-w-0 flex-1 text-xs"
+        />
+        {source.tempoMode === "decimate" && (
+          <Select<TempoDecimator>
+            value={source.tempoDecimator}
+            options={DECIMATORS}
+            onValueChange={(v) => ctx.setTempoDecimator(source.id, v)}
+            className="h-8 w-40 shrink-0 text-xs"
+          />
+        )}
+        {source.tempoMode !== "none" && (
+          <Select<string>
+            value={source.tempoFps}
+            options={fpsOptions}
+            onValueChange={(v) => ctx.setTempoFps(source.id, v)}
+            className="h-8 w-32 shrink-0 text-xs"
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function TemporalPage() {
+  const { settings } = useProject();
+  const loaded = settings.sources
+    .map((s, i) => ({ s, i }))
+    .filter(({ s }) => s.path);
+  return (
+    <div className="mx-auto flex max-w-2xl flex-col gap-4">
+      <p className="text-sm leading-relaxed text-muted-foreground">
+        Line up sources that run at different frame rates. Remove duplicated frames (telecine)
+        down to a lower rate, retime a clip without touching its frames, or duplicate frames up
+        to match a higher-rate source - all by choosing a target frame rate instead of guessing
+        cycles and offsets. These apply to both the preview and the export.
+      </p>
+      {loaded.length === 0 ? (
+        <div className="flex h-40 items-center justify-center text-xs text-muted-foreground/50">
+          No sources. Add one from the sidebar.
+        </div>
+      ) : (
+        loaded.map(({ s, i }) => <TemporalRow key={s.id} source={s} index={i} />)
+      )}
     </div>
   );
 }

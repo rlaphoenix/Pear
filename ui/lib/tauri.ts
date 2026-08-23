@@ -160,8 +160,45 @@ export interface Crop {
 }
 export const ZERO_CROP: Crop = { top: 0, right: 0, bottom: 0, left: 0 };
 
+export type TempoMode = "none" | "fps" | "decimate" | "duplicate";
+export const TEMPO_MODES: { value: TempoMode; label: string; description: string }[] = [
+  { value: "none", label: "None", description: "Leave the frame rate untouched." },
+  {
+    value: "decimate",
+    label: "Remove duplicate frames",
+    description: "Drop duplicated frames (e.g. telecine) down to a lower rate.",
+  },
+  {
+    value: "fps",
+    label: "Change frame rate",
+    description: "Retime the clip without adding or removing any frames.",
+  },
+  {
+    value: "duplicate",
+    label: "Add duplicate frames",
+    description: "Duplicate frames to reach a higher rate and match another source.",
+  },
+];
+
+export type TempoDecimator = "fast" | "accurate";
+export const DECIMATORS: { value: TempoDecimator; label: string; description: string }[] = [
+  {
+    value: "fast",
+    label: "Fast (SelectEvery)",
+    description: "Drops one frame at a fixed position per cycle. May miss the real duplicate on irregular content.",
+  },
+  {
+    value: "accurate",
+    label: "Accurate (VDecimate)",
+    description: "Detects and drops the real duplicate in each cycle. Slower and uses more memory.",
+  },
+];
+
+export const FPS_PRESETS = ["23.976", "24", "25", "29.97", "30", "50", "59.94", "60"];
+
 export interface SourceInfo {
   fps: number;
+  nativeFps: number;
   total: number;
   width: number;
   height: number;
@@ -211,6 +248,9 @@ interface SourceParams {
   range: RangeSetting;
   name: string;
   tonemap: TonemapParams;
+  tempoMode: TempoMode;
+  tempoDecimator: TempoDecimator;
+  tempoFps: string;
 }
 
 export type TabId = "sources" | "editor" | "preview" | "export";
@@ -330,6 +370,9 @@ export interface SavedSource {
   matrix: MatrixSetting;
   range: RangeSetting;
   name: string;
+  tempoMode: TempoMode;
+  tempoDecimator: TempoDecimator;
+  tempoFps: string;
 }
 
 export interface ScriptTemplate {
@@ -495,6 +538,9 @@ export const initSource = (
   range: RangeSetting = "",
   tonemapSrc: TonemapSrc | "" = "",
   tonemap = false,
+  tempoMode: TempoMode = "none",
+  tempoDecimator: TempoDecimator = "fast",
+  tempoFps = "",
 ) =>
   invoke<ProbedSource>("init_source", {
     path,
@@ -506,6 +552,9 @@ export const initSource = (
     range,
     tonemapSrc,
     tonemap,
+    tempoMode,
+    tempoDecimator,
+    tempoFps,
   });
 
 export interface IndexEvent {

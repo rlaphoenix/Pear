@@ -24,6 +24,8 @@ import {
   TonemapFunc,
   GamutMapping,
   TonemapOpt,
+  TempoMode,
+  TempoDecimator,
   FrameMatch,
   MatchKind,
   initSource,
@@ -54,6 +56,7 @@ import {
   ScriptTemplate,
   Segment,
   SourceInfo,
+  FPS_PRESETS,
   ZERO_CROP,
 } from "@/lib/tauri";
 import { MEDIA_EXTS } from "@/lib/utils";
@@ -80,6 +83,9 @@ export interface UiSource {
   tonemapDstNits: number | null;
   tonemapSrcNits: number | null;
   tonemapUseDovi: boolean;
+  tempoMode: TempoMode;
+  tempoDecimator: TempoDecimator;
+  tempoFps: string;
   name: string;
   info: SourceInfo | null;
   vsprobing: boolean;
@@ -119,6 +125,9 @@ const emptySource = (): UiSource => ({
   tonemapDstNits: null,
   tonemapSrcNits: null,
   tonemapUseDovi: true,
+  tempoMode: "none",
+  tempoDecimator: "fast",
+  tempoFps: "",
   name: "",
   info: null,
   vsprobing: false,
@@ -314,6 +323,9 @@ function useSettings() {
           input.range,
           input.tonemapSrc,
           input.tonemap,
+          input.tempoMode,
+          input.tempoDecimator,
+          input.tempoFps,
         );
         setSettings((s) => ({
           ...s,
@@ -647,6 +659,40 @@ function useSettings() {
     [patchTonemap],
   );
 
+  const patchTempo = useCallback(
+    (id: string, partial: Partial<UiSource>) => {
+      const cur = settingsRef.current.sources.find((x) => x.id === id);
+      if (!cur) return;
+      updateSource(id, (src) => {
+        const next = { ...src, ...partial, info: null };
+        if (next.path) rememberSource(savedSources, next);
+        return next;
+      });
+      if (cur.path) void vsprobe({ ...cur, ...partial, info: null });
+    },
+    [vsprobe, updateSource],
+  );
+
+  const setTempoMode = useCallback(
+    (id: string, tempoMode: TempoMode) => {
+      const cur = settingsRef.current.sources.find((x) => x.id === id);
+      if (!cur || cur.tempoMode === tempoMode) return;
+      const tempoFps = cur.tempoFps || (cur.info ? fpsPreset(cur.info.nativeFps, tempoMode) : "");
+      patchTempo(id, { tempoMode, tempoFps });
+    },
+    [patchTempo],
+  );
+
+  const setTempoFps = useCallback(
+    (id: string, tempoFps: string) => patchTempo(id, { tempoFps }),
+    [patchTempo],
+  );
+
+  const setTempoDecimator = useCallback(
+    (id: string, tempoDecimator: TempoDecimator) => patchTempo(id, { tempoDecimator }),
+    [patchTempo],
+  );
+
   const setSourceName = useCallback(
     (id: string, name: string) => {
       updateSource(id, (src) => {
@@ -756,6 +802,9 @@ function useSettings() {
     setTonemapDstNits,
     setTonemapSrcNits,
     setTonemapUseDovi,
+    setTempoMode,
+    setTempoDecimator,
+    setTempoFps,
     setSourceName,
     setComparisons,
     appendComparisons,
@@ -789,6 +838,19 @@ function kindToMatch(k: MatchKind | undefined): FrameMatch {
   return k ? (k.toUpperCase() as FrameMatch) : "Any";
 }
 
+function fpsPreset(native: number, mode: TempoMode): string {
+  const nums = FPS_PRESETS.map((p) => ({ p, v: Number(p) }));
+  if (mode === "decimate") {
+    const below = nums.filter((n) => n.v < native - 0.1);
+    return (below.length ? below[below.length - 1] : nums[0]).p;
+  }
+  if (mode === "duplicate") {
+    const above = nums.filter((n) => n.v > native + 0.1);
+    return (above.length ? above[0] : nums[nums.length - 1]).p;
+  }
+  return nums.reduce((a, b) => (Math.abs(b.v - native) < Math.abs(a.v - native) ? b : a)).p;
+}
+
 function applySaved(
   path: string | null | undefined,
   saved: Record<SourcePath, SavedSource>,
@@ -815,6 +877,9 @@ function applySaved(
     tonemapDstNits: s?.tonemap?.dstNits ?? null,
     tonemapSrcNits: s?.tonemap?.srcNits ?? null,
     tonemapUseDovi: s?.tonemap?.useDovi ?? true,
+    tempoMode: s?.tempoMode ?? "none",
+    tempoDecimator: s?.tempoDecimator ?? "fast",
+    tempoFps: s?.tempoFps ?? "",
     name: s?.name ?? "",
     info: null,
     vsprobing: false,
@@ -843,6 +908,9 @@ function rememberSource(
       matrix: src.matrix,
       range: src.range,
       name: src.name,
+      tempoMode: src.tempoMode,
+      tempoDecimator: src.tempoDecimator,
+      tempoFps: src.tempoFps,
     },
   };
 }
@@ -863,6 +931,9 @@ function toConfig(s: Settings, _saved: Record<SourcePath, SavedSource>): Config 
         matrix: src.matrix,
         range: src.range,
         name: src.name,
+        tempoMode: src.tempoMode,
+        tempoDecimator: src.tempoDecimator,
+        tempoFps: src.tempoFps,
       };
   }
   return {

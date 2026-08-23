@@ -14,6 +14,7 @@ use vapoursynth::video_info::{Framerate, Resolution};
 #[serde(rename_all = "camelCase")]
 pub struct SourceInfo {
     pub fps: f64,
+    pub native_fps: f64,
     pub total: u64,
     pub width: u32,
     pub height: u32,
@@ -272,6 +273,15 @@ pub struct Tonemap {
     pub range: String,
 }
 
+#[derive(Debug, Clone, Default)]
+pub enum Tempo {
+    #[default]
+    None,
+    AssumeFps { num: u32, den: u32 },
+    Decimate { cycle: u32, num: u32, den: u32 },
+    Select { cycle: u32, offsets: Vec<u32>, num: u32, den: u32 },
+}
+
 #[derive(Debug, Clone)]
 pub enum Fit {
     None,
@@ -288,6 +298,7 @@ impl Default for Fit {
 #[derive(Debug, Clone, Default)]
 pub struct Geom {
     pub deint: Deint,
+    pub tempo: Tempo,
     pub tonemap: Tonemap,
     pub matrix: String,
     pub range: String,
@@ -628,6 +639,7 @@ pub fn vsprobe(
     // (a build-time decode deadlocks Python-filter graphs).
     Ok(SourceInfo {
         fps,
+        native_fps: fps,
         total,
         width,
         height,
@@ -1086,6 +1098,24 @@ fn deint_code(d: &Deint) -> String {
     }
 }
 
+fn tempo_code(t: &Tempo) -> String {
+    match t {
+        Tempo::None => String::new(),
+        Tempo::AssumeFps { num, den } => {
+            format!("clip = core.std.AssumeFPS(clip, fpsnum={num}, fpsden={den})\n")
+        }
+        Tempo::Decimate { cycle, num, den } => format!(
+            "clip = core.vivtc.VDecimate(clip, cycle={cycle})\nclip = core.std.AssumeFPS(clip, fpsnum={num}, fpsden={den})\n"
+        ),
+        Tempo::Select { cycle, offsets, num, den } => {
+            let offs = offsets.iter().map(|o| o.to_string()).collect::<Vec<_>>().join(", ");
+            format!(
+                "clip = core.std.SelectEvery(clip, cycle={cycle}, offsets=[{offs}])\nclip = core.std.AssumeFPS(clip, fpsnum={num}, fpsden={den})\n"
+            )
+        }
+    }
+}
+
 /// Deinterlacing is unconditional (every frame) - never emit a per-frame Python callback
 /// (`std.FrameEval` with a lambda), which deadlocks VSScript's threaded / async rendering.
 fn field_val(d: &Deint) -> u8 {
@@ -1351,6 +1381,7 @@ fn source_fn(index: usize, spec: &FrameSpec) -> String {
     let cache_cpu = bs_cachepath_tag(spec.path, "cpu");
     let deint = indent(&deint_code(&g.deint), 8);
     let user = indent(spec.script, 8);
+    let tempo = indent(&tempo_code(&g.tempo), 8);
     let geometry = indent(&geometry_code(g), 8);
     let m = if g.matrix.is_empty() {
         "None".to_string()
@@ -1372,6 +1403,7 @@ fn source_fn(index: usize, spec: &FrameSpec) -> String {
         # ===== user script =====
 {user}
         # ===== end user script =====
+{tempo}
 {rgb}
 {geometry}
         clip = core.resize.Point(clip, format=vs.RGB24, dither_type="error_diffusion")

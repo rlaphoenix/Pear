@@ -127,6 +127,19 @@ pub struct SavedSource {
     pub range: String,
     #[serde(default)]
     pub name: String,
+    #[serde(default = "default_tempo_mode")]
+    pub tempo_mode: String,
+    #[serde(default = "default_tempo_decimator")]
+    pub tempo_decimator: String,
+    #[serde(default)]
+    pub tempo_fps: String,
+}
+
+fn default_tempo_mode() -> String {
+    "none".into()
+}
+fn default_tempo_decimator() -> String {
+    "fast".into()
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]

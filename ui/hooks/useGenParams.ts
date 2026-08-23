@@ -36,6 +36,9 @@ export function useGenParams(
               useDovi: s.tonemapUseDovi,
             },
             name: s.name,
+            tempoMode: s.tempoMode,
+            tempoDecimator: s.tempoDecimator,
+            tempoFps: s.tempoFps,
           });
         return acc;
       }, []),

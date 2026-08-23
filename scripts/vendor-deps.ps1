@@ -24,6 +24,7 @@ param(
     "misc",
     "akarin",
     "descale",
+    "vivtc",
     "havsfunc",
     "vsutil"
   ),
@@ -109,7 +110,7 @@ $verify = @'
 import vapoursynth as vs
 core = vs.core
 need = ["bs","placebo","bwdif","nnedi3","znedi3","mv","fmtc","eedi3m","sangnom","dfttest",
-        "fft3dfilter","knlm","rgvs","grain","tcanny","ctmf","dctf","akarin","descale","misc"]
+        "fft3dfilter","knlm","rgvs","grain","tcanny","ctmf","dctf","akarin","descale","misc","vivtc"]
 missing = [n for n in need if not hasattr(core, n)]
 if missing:
     raise SystemExit("missing plugins: " + ", ".join(missing))

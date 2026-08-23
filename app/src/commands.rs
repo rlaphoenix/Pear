@@ -258,6 +258,12 @@ pub struct SourceParams {
     pub name: String,
     #[serde(default)]
     pub tonemap: TonemapParams,
+    #[serde(default)]
+    pub tempo_mode: String,
+    #[serde(default)]
+    pub tempo_decimator: String,
+    #[serde(default)]
+    pub tempo_fps: String,
 }
 
 impl SourceParams {
@@ -281,7 +287,14 @@ impl SourceParams {
         t.use_dovi.hash(&mut h);
         t.dst_nits.map(f64::to_bits).hash(&mut h);
         t.src_nits.map(f64::to_bits).hash(&mut h);
+        self.tempo_mode.hash(&mut h);
+        self.tempo_decimator.hash(&mut h);
+        self.tempo_fps.hash(&mut h);
         h.finish()
+    }
+
+    fn tempo(&self, native_fps: f64) -> vapoursynth::Tempo {
+        tempo_plan(&self.tempo_mode, &self.tempo_decimator, &self.tempo_fps, native_fps)
     }
 
     fn deint_active(&self) -> bool {
@@ -683,10 +696,15 @@ fn probe_source_uncached(src: &SourceParams) -> Result<SourceInfo, String> {
     info.dv_profile = d.dv_profile;
     info.dv_bl_compat = d.dv_bl_compat;
     info.is_still = info.total <= 1 && !vapoursynth::is_active(&src.script);
+    info.native_fps = info.fps;
     if info.is_still {
         info.fps = IMAGE_FPS;
+        info.native_fps = IMAGE_FPS;
         info.total = IMAGE_FPS as u64 * IMAGE_SECONDS;
         info.duration = IMAGE_SECONDS as f64;
+    } else {
+        let tempo = src.tempo(info.native_fps);
+        apply_tempo_info(&mut info, &tempo);
     }
     Ok(info)
 }
@@ -780,6 +798,11 @@ fn geom_for(src: &SourceParams, info: &SourceInfo, fit: vapoursynth::Fit) -> vap
     let dar_w = dar_width.unwrap_or(info.width);
     vapoursynth::Geom {
         deint: src.deint(),
+        tempo: if info.is_still {
+            vapoursynth::Tempo::None
+        } else {
+            src.tempo(info.native_fps)
+        },
         tonemap: src.tonemap(info),
         matrix: vapoursynth::matrix_vs(&src.matrix)
             .or_else(|| vapoursynth::matrix_vs(&info.matrix))
@@ -816,6 +839,96 @@ fn parse_dar(s: &str) -> f64 {
 
 fn dar_label(dar: &str) -> String {
     dar.trim().replace('/', ":")
+}
+
+fn parse_fps(s: &str) -> Option<(u32, u32)> {
+    let t = s.trim();
+    if t.is_empty() {
+        return None;
+    }
+    if let Some((a, b)) = t.split_once('/') {
+        let n: u32 = a.trim().parse().ok()?;
+        let d: u32 = b.trim().parse().ok()?;
+        return (n > 0 && d > 0).then_some((n, d));
+    }
+    let f: f64 = t.parse().ok()?;
+    if f <= 0.0 {
+        return None;
+    }
+    let k = (f * 1001.0 / 1000.0).round();
+    if k > 0.0 && (k * 1000.0 / 1001.0 - f).abs() < 0.01 {
+        return Some((k as u32 * 1000, 1001));
+    }
+    if (f.round() - f).abs() < 1e-4 {
+        return Some((f.round() as u32, 1));
+    }
+    Some(((f * 1000.0).round() as u32, 1000))
+}
+
+fn tempo_plan(mode: &str, decimator: &str, fps: &str, native: f64) -> vapoursynth::Tempo {
+    let Some((num, den)) = parse_fps(fps) else {
+        return vapoursynth::Tempo::None;
+    };
+    let target = num as f64 / den as f64;
+    if native <= 0.0 || target <= 0.0 {
+        return vapoursynth::Tempo::None;
+    }
+    let decimate_cycle = || {
+        let cycle = (native / (native - target)).round() as u32;
+        (native > target && cycle >= 2).then_some(cycle)
+    };
+    match mode {
+        "fps" => vapoursynth::Tempo::AssumeFps { num, den },
+        "decimate" => match decimate_cycle() {
+            Some(cycle) if decimator == "accurate" => {
+                vapoursynth::Tempo::Decimate { cycle, num, den }
+            }
+            Some(cycle) => vapoursynth::Tempo::Select {
+                cycle,
+                offsets: (0..cycle - 1).collect(),
+                num,
+                den,
+            },
+            None => vapoursynth::Tempo::None,
+        },
+        "duplicate" if target > native => {
+            let r = target / native;
+            let ab = (2..=600u32).find_map(|b| {
+                let a = (b as f64 / r).round() as u32;
+                (a >= 1 && a < b && (b as f64 / a as f64 - r).abs() < 1e-3).then_some((a, b))
+            });
+            match ab {
+                Some((a, b)) => vapoursynth::Tempo::Select {
+                    cycle: a,
+                    offsets: (0..b).map(|k| (k * a) / b).collect(),
+                    num,
+                    den,
+                },
+                None => vapoursynth::Tempo::None,
+            }
+        }
+        _ => vapoursynth::Tempo::None,
+    }
+}
+
+fn apply_tempo_info(info: &mut SourceInfo, tempo: &vapoursynth::Tempo) {
+    let (total, num, den) = match tempo {
+        vapoursynth::Tempo::None => return,
+        vapoursynth::Tempo::AssumeFps { num, den } => (info.total, *num, *den),
+        vapoursynth::Tempo::Decimate { cycle, num, den } => {
+            let dropped = info.total.div_ceil(*cycle as u64);
+            (info.total.saturating_sub(dropped), *num, *den)
+        }
+        vapoursynth::Tempo::Select { cycle, offsets, num, den } => {
+            let a = *cycle as u64;
+            let rem = info.total % a;
+            let extra = offsets.iter().filter(|&&o| (o as u64) < rem).count() as u64;
+            ((info.total / a) * offsets.len() as u64 + extra, *num, *den)
+        }
+    };
+    info.total = total;
+    info.fps = num as f64 / den as f64;
+    info.duration = if info.fps > 0.0 { total as f64 / info.fps } else { 0.0 };
 }
 
 fn fmt_timestamp(secs: f64) -> String {
@@ -898,6 +1011,18 @@ fn deint_label(src: &SourceParams) -> Option<String> {
     };
     let rate = if src.deint_double_rate() { "Double" } else { "Single" };
     Some(format!("{algo_disp} ({rate} Rate)"))
+}
+
+fn tempo_label(src: &SourceParams, info: &SourceInfo) -> Option<String> {
+    if matches!(src.tempo(info.native_fps), vapoursynth::Tempo::None) {
+        return None;
+    }
+    let fps = format!("{:.3}", info.fps).trim_end_matches('0').trim_end_matches('.').to_string();
+    Some(match src.tempo_mode.as_str() {
+        "fps" => format!("Frame rate set to {fps}"),
+        "duplicate" => format!("Frames duplicated to {fps} fps"),
+        _ => format!("Decimated to {fps} fps"),
+    })
 }
 
 fn range_label(range: &str) -> &'static str {
@@ -1135,6 +1260,9 @@ fn composite_frames(
                     if let Some(l) = deint_label(src) {
                         lines.push(format!("Deinterlaced with {l}"));
                     }
+                    if let Some(l) = tempo_label(src, info) {
+                        lines.push(l);
+                    }
                 }
                 if dar_target_width(info.width, info.height, &src.dar).is_some()
                     || (!src.dar.trim().is_empty()
@@ -1236,6 +1364,9 @@ pub async fn init_source(
     range: String,
     tonemap_src: String,
     tonemap: bool,
+    tempo_mode: String,
+    tempo_decimator: String,
+    tempo_fps: String,
 ) -> Result<ProbedSource, String> {
     let st = state.inner().clone();
     let src = SourceParams {
@@ -1252,6 +1383,9 @@ pub async fn init_source(
         range: String::new(),
         name: String::new(),
         tonemap: TonemapParams::default(),
+        tempo_mode: tempo_mode.clone(),
+        tempo_decimator: tempo_decimator.clone(),
+        tempo_fps: tempo_fps.clone(),
     };
     tauri::async_runtime::spawn_blocking(move || {
         let info = probe_source(&st, &src)?;

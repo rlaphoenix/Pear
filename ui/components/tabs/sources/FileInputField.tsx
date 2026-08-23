@@ -112,7 +112,14 @@ export function FileInputField({ source }: { source: UiSource }) {
               const disp = `${dispW}×${h}`;
               return disp === raw ? raw : `${raw} → ${disp}`;
             })()}{" "}
-            · {source.info.fps.toFixed(3)} · {source.info.total}f
+            ·{" "}
+            {(() => {
+              const fmt = (v: number) => Number(v.toFixed(3)).toString();
+              const orig = fmt(source.info.nativeFps);
+              const cur = fmt(source.info.fps);
+              return orig === cur ? `${orig} fps` : `${orig} → ${cur} fps`;
+            })()}{" "}
+            · {source.info.total} frames
           </div>
         )
       )}

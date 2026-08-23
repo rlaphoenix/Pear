@@ -66,9 +66,8 @@ required, I recommend asking an AI LLM like ChatGPT or Gemini, just link it this
 
    - `bs` - BestSource, decodes every video and image source (the only strictly required one)
    - `placebo` - vs-placebo, HDR to SDR tonemapping (Dolby Vision, HDR10+, HLG)
-   - `bwdif`, `nnedi3`, `znedi3` - the BWDIF and NNEDI3 deinterlacers
-   - `havsfunc`, `vsutil`, `mvtools`, `fmtconv`, `eedi3m`, `sangnom`, `dfttest`, `fft3dfilter`, `knlmeanscl`, `rgvs`, `addgrain`, `tcanny`, `ctmf`, `dctfilter` - the QTGMC deinterlacer and its supporting plugins
-   - `misc`, `akarin`, `descale` - general-purpose helper plugins
+   - `bwdif`, `nnedi3`, `znedi3`, `havsfunc` - the BWDIF, NNEDI3 and QTGMC deinterlacers
+   - `misc`, `akarin`, `descale`, `vivtc`, `vsutil`, `mvtools`, `fmtconv`, `eedi3m`, `sangnom`, `dfttest`, `fft3dfilter`, `knlmeanscl`, `rgvs`, `addgrain`, `tcanny`, `ctmf`, `dctfilter` - commonly used general-purpose plugins
 
   [Releases]: <https://github.com/rlaphoenix/pear/releases>
   [VapourSynth]: <https://github.com/vapoursynth/vapoursynth/releases>
