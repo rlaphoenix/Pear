@@ -256,12 +256,30 @@ interface SourceParams {
 export type TabId = "sources" | "preview" | "export";
 export const TAB_IDS: TabId[] = ["sources", "preview", "export"];
 
-export const DEFAULT_SCRIPT = `# \`clip\` is this source, already loaded - transform it below.
-# \`SOURCE\` holds the file path if you need it.
+export const DEFAULT_SCRIPT = `# This is where you can make advanced edits using the VapourSynth Scripting Engine.
+# VapourSynth is an application for video manipulation through Python scripting.
+# See: https://www.vapoursynth.com/doc/gettingstarted.html
 #
-# Example:
+# Please note:
+# - \`core\` is already imported for you, do NOT add \`from vapoursynth import core\`.
+# - You may re-load the clip using a different sourcer/decoder, but all settings/toggles
+#   you see on your left, will NOT do anything, and support will not be provided.
+#
+# Variables:
+# - \`core\`: the VapourSynth core.
+# - \`clip\`: this video source, decoded with BestSource.
+# - \`SOURCE\`: this source's file path, if you need it.
+#
+# Basic Examples:
+#
+# # Crop 20px on the top and bottom
 # clip = core.std.Crop(clip, top=20, right=0, bottom=20, left=0)
+#
+# # Resize the video to 1920x1080
 # clip = clip.resize.Spline36(1920, 1080)
+#
+# # Fix incorrectly double-squeezed color levels
+# clip = core.std.Levels(clip, min_in=30, max_in=218, min_out=16, max_out=235, planes=0)
 `;
 
 export interface GenParams {
