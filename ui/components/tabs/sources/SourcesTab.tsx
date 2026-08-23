@@ -145,7 +145,7 @@ export function SourcesTab({ scriptFor, setScript }: Props) {
 
       {selected ? (
         <div className="flex min-h-0 flex-1">
-          <div className="w-[32rem] shrink-0 overflow-y-auto border-r border-border p-3">
+          <div className="w-[32rem] shrink-0 overflow-y-auto p-3">
             <SourcePage
               key={selected.id}
               source={selected}
