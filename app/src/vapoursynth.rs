@@ -464,12 +464,14 @@ pub fn bestsource_version() -> String {
     if !supported() {
         return "not found".into();
     }
-    let program = "import vapoursynth as vs\n\
-                   try:\n\
-                       _v = vs.core.bs.version\n\
-                       bs_version = f'{_v.major}.{_v.minor}'\n\
-                   except AttributeError:\n\
-                       bs_version = 'not found'\n";
+    let program = concat!(
+        "import vapoursynth as vs\n",
+        "try:\n",
+        "    _v = vs.core.bs.version\n",
+        "    bs_version = f'{_v.major}.{_v.minor}'\n",
+        "except AttributeError:\n",
+        "    bs_version = 'not found'\n",
+    );
     let Ok(env) = build_env_from_script(program) else {
         return "unknown".into();
     };
