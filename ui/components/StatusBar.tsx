@@ -104,13 +104,13 @@ export function StatusBar({ className }: { className?: string }) {
 
       <Item label="VapourSynth" value={buildInfo?.vapoursynth ?? "-"} />
 
+      <Item label="Decoder" value={decoderValue} title="Source decoder" />
+
       <Item
         label="Hardware Device"
         value={st?.hwdevice ?? "-"}
         title="Hardware decode device (CPU = software)"
       />
-
-      <Item label="Decoder" value={decoderValue} title="Source decoder" />
 
       <Item label="Threads" value={st?.threads || "-"} title="VapourSynth worker threads" />
 
