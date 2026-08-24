@@ -84,7 +84,7 @@ To get started, drag and drop or use the Add Sources button to load in some vide
 Just about any codec and format is supported. If FFmpeg supports it, so does Pear, that includes
 Dolby Vision, HDR10+, HDR10, and HLG.
 
-Once you add at least one source, the Sources, Editor, Preview, and Export tabs will become usable.
+Once you add at least one source, the Sources, Preview, and Export tabs will become usable.
 Go over to the Sources tab.
 
 ### Sources
@@ -96,21 +96,23 @@ Naming sources is recommended so that the export images can be named appropriate
 when uploading to sites like <https://slow.pics> or <https://comp.pics>.
 
 Each source can be independently modified for comparison preparation to your liking, including
-cropping, deinterlacing, tonemapping, modifying the aspect ratio, and setting the color matrix
-and color levels. Its up to you how you wish to compare, but its generally recommended to try
-keep as much data when comparing, by comparing against the higher quality file, compared to
-downscaling or reducing data.
+cropping, deinterlacing, tonemapping, modifying the aspect ratio, modifying the frame rate,
+and setting the color matrix and color levels. Its up to you how you wish to compare, but its
+generally recommended to try keep as much data when comparing, by comparing against the higher
+quality file, compared to downscaling or reducing data.
 
-There's a Resolution tab at the bottom that lets you control spatial alignment of all loaded
-sources. For example, of you are comparing an SD file against a HD file, you can choose to align
-all sources by upscaling the smallest sources to the largest, downscaling the largest sources
-to the smallest, pad the smallest source to the largest, or crop the largest source to smallest.
+There's a Spatial Alignment button in the top-right of the source tab bar that lets you control
+spatial alignment of all loaded sources. For example, if you are comparing an SD file against a
+HD file, you can choose to align all sources by upscaling the smallest sources to the largest,
+downscaling the largest sources to the smallest, pad the smallest source to the largest, or crop
+the largest source to smallest.
 
-### Editor
+#### Editor
 
-The Editor tab brings a full VapourSynth engine right to your fingertips along with a template
-system. The source is already brought in behind the scenes as `clip` and the path string is in
-as `SOURCE`.
+Beside each source's options, on the right of the Sources tab, is a full VapourSynth code editor
+along with a template system. The source is already brought in behind the scenes as `clip` and
+the path string is in as `SOURCE`. The `(?)` button on the editor header opens the VapourSynth
+scripting guide.
 
 Here you can make advanced edits like normalizing frame rate between sources, fixing color to
 make a fair PQ comparison, advanced scaling like a zoom or pan rather than a naive crop/scale.
