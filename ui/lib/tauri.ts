@@ -10,6 +10,10 @@ export type UnixSeconds = number;
 
 // Resampling filters, named exactly as the `image` crate's `FilterType` variants.
 export type Algo = "Nearest" | "Triangle" | "CatmullRom" | "Gaussian" | "Lanczos3";
+
+// Pad/crop alignment: off, or on with the shared canvas taking the largest or smallest source's
+// aspect ratio.
+export type SpatialAspect = "off" | "largest" | "smallest";
 export const ALGOS: Algo[] = [
   "Nearest",
   "Triangle",
@@ -288,8 +292,8 @@ export interface GenParams {
   upscaleAlgo: Algo;
   downscaleLargest: boolean;
   downscaleAlgo: Algo;
-  cropToSmallest: boolean;
-  padToLargest: boolean;
+  cropToSmallest: SpatialAspect;
+  padToLargest: SpatialAspect;
   marginStart: number;
   marginEnd: number;
   match: FrameMatch;
@@ -401,8 +405,8 @@ export interface ScriptTemplate {
 export interface Config {
   upscale: ScaleOpt;
   downscale: ScaleOpt;
-  cropToSmallest: boolean;
-  padToLargest: boolean;
+  cropToSmallest: SpatialAspect;
+  padToLargest: SpatialAspect;
   comparisons: number[];
   gutterWidth: number;
   /** Key insertion order defines source order. */

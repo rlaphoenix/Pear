@@ -26,6 +26,7 @@ import {
   FPS_PRESETS,
   deintKernelLabel,
   type Algo,
+  type SpatialAspect,
   type Crop,
   type DeintKernel,
   type Matrix,
@@ -45,6 +46,12 @@ import { DynamicRangeField } from "@/components/tabs/sources/DynamicRangeField";
 import { SourceEditor } from "@/components/tabs/sources/SourceEditor";
 
 const algoOptions = ALGOS.map((a) => ({ value: a, label: a }));
+
+const alignOptions: { value: SpatialAspect; label: string }[] = [
+  { value: "off", label: "Off" },
+  { value: "largest", label: "Match largest source's aspect ratio" },
+  { value: "smallest", label: "Match smallest source's aspect ratio" },
+];
 
 const nameOf = (s: UiSource) => s.name || s.path?.split(/[\\/]/).pop() || "No source";
 
@@ -360,22 +367,34 @@ function ResolutionPage() {
           />
         </div>
       </div>
-      <CheckboxField
-        checked={settings.padToLargest}
-        onCheckedChange={(v) =>
-          patch(v ? { padToLargest: true, cropToSmallest: false } : { padToLargest: false })
-        }
-        label="Pad to largest source"
-        description="Center each source on black, filling out to the largest source's bounding box. No detail is lost. Combine with upscale/downscale to align sources of differing aspect ratios (e.g. pillarbox a 4:3 source among 16:9 ones)."
-      />
-      <CheckboxField
-        checked={settings.cropToSmallest}
-        onCheckedChange={(v) =>
-          patch(v ? { cropToSmallest: true, padToLargest: false } : { cropToSmallest: false })
-        }
-        label="Crop to smallest source"
-        description="Center-crop every source down to the common area they all share, aligning them edge-to-edge with no bars. Trims edge detail off the larger sources. Combine with upscale/downscale to first match scale, then crop away the aspect-ratio difference."
-      />
+      <div className="flex flex-col gap-1.5">
+        <span className="text-sm text-foreground/90">Pad the sources</span>
+        <span className="max-w-xl text-xs text-muted-foreground">
+          Fit each source onto a shared canvas and fill the gaps with black - no detail is lost. The
+          canvas takes the chosen source's aspect ratio, so a differing source is either pillarboxed
+          (match largest) or letterboxed (match smallest). Combine with upscale/downscale to set the
+          output resolution.
+        </span>
+        <Select<SpatialAspect>
+          value={settings.padToLargest}
+          onValueChange={(v) => patch(v === "off" ? { padToLargest: v } : { padToLargest: v, cropToSmallest: "off" })}
+          options={alignOptions}
+        />
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <span className="text-sm text-foreground/90">Crop the sources</span>
+        <span className="max-w-xl text-xs text-muted-foreground">
+          Fill a shared canvas edge-to-edge with no bars, trimming edge detail off sources that don't
+          match. The canvas takes the chosen source's aspect ratio. With upscale/downscale on, sources
+          are scaled to cover the canvas before cropping; with neither, it's a straight centre
+          pixel-crop.
+        </span>
+        <Select<SpatialAspect>
+          value={settings.cropToSmallest}
+          onValueChange={(v) => patch(v === "off" ? { cropToSmallest: v } : { cropToSmallest: v, padToLargest: "off" })}
+          options={alignOptions}
+        />
+      </div>
     </div>
   );
 }

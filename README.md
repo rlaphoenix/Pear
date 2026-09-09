@@ -104,10 +104,12 @@ quality file, compared to downscaling or reducing data.
 There's a Spatial Alignment button in the top-right of the source tab bar that lets you control
 spatial alignment of all loaded sources. For example, if you are comparing an SD file against a
 HD file, you can choose to align all sources by upscaling the smallest sources to the largest,
-downscaling the largest sources to the smallest, pad sources out to the largest, or crop them to
-the area they all share. Scaling (upscale/downscale) can be combined with pad or crop, which lets
-you align sources that differ in both resolution and aspect ratio - e.g. scale everything up, then
-pillarbox a 4:3 source sitting among 16:9 ones.
+downscaling the largest sources to the smallest, padding the sources onto a shared canvas, or
+cropping them to fill one. Scaling (upscale/downscale) can be combined with pad or crop to align
+sources that differ in both resolution and aspect ratio. Pad and crop each choose which source's
+aspect ratio the canvas takes - independent of resolution - so a 4:3 source among 16:9 ones can be
+pillarboxed (match the largest) or the 16:9 ones letterboxed (match the smallest), at whatever
+resolution you scale to.
 
 #### Editor
 

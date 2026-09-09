@@ -12,6 +12,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { listen } from "@tauri-apps/api/event";
 import {
   Algo,
+  SpatialAspect,
   Config,
   Crop,
   DeintKernel,
@@ -101,8 +102,8 @@ export interface Settings {
   upscaleAlgo: Algo;
   downscaleLargest: boolean;
   downscaleAlgo: Algo;
-  cropToSmallest: boolean;
-  padToLargest: boolean;
+  cropToSmallest: SpatialAspect;
+  padToLargest: SpatialAspect;
   gutterWidth: number;
   sources: UiSource[];
 }
@@ -146,8 +147,8 @@ function useSettings() {
     upscaleAlgo: "Triangle",
     downscaleLargest: false,
     downscaleAlgo: "Lanczos3",
-    cropToSmallest: false,
-    padToLargest: false,
+    cropToSmallest: "off",
+    padToLargest: "off",
     gutterWidth: 120,
     sources: [],
   }));
@@ -471,8 +472,8 @@ function useSettings() {
         upscaleAlgo: cfg.upscale?.algorithm || "Triangle",
         downscaleLargest: cfg.downscale?.enabled ?? false,
         downscaleAlgo: cfg.downscale?.algorithm || "Lanczos3",
-        cropToSmallest: cfg.cropToSmallest ?? false,
-        padToLargest: cfg.padToLargest ?? false,
+        cropToSmallest: cfg.cropToSmallest ?? "off",
+        padToLargest: cfg.padToLargest ?? "off",
         gutterWidth: cfg.gutterWidth ?? 120,
         sources: sourceKeys.map((k) => applySaved(k, savedSources.current)),
       };

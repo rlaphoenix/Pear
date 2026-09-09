@@ -382,10 +382,10 @@ pub struct GenParams {
     pub downscale_largest: bool,
     #[serde(default)]
     pub downscale_algo: String,
-    #[serde(default)]
-    pub crop_to_smallest: bool,
-    #[serde(default)]
-    pub pad_to_largest: bool,
+    #[serde(default, deserialize_with = "pipeline::de_crop")]
+    pub crop_to_smallest: pipeline::SpatialAspect,
+    #[serde(default, deserialize_with = "pipeline::de_pad")]
+    pub pad_to_largest: pipeline::SpatialAspect,
     #[serde(default = "default_margin")]
     pub margin_start: f64,
     #[serde(default = "default_margin")]
@@ -988,7 +988,7 @@ fn scale_label(params: &GenParams, src_dims: (u32, u32), target: (u32, u32)) -> 
     } else {
         None
     };
-    let verb = match (scale, params.crop_to_smallest, params.pad_to_largest) {
+    let verb = match (scale, params.crop_to_smallest.is_on(), params.pad_to_largest.is_on()) {
         (Some(s), true, _) => format!("{s} & cropped"),
         (Some(s), _, true) => format!("{s} & padded"),
         (Some(s), _, _) => s.to_string(),
@@ -1236,8 +1236,8 @@ fn composite_frames(
     let mark = concat!("Pear v", env!("CARGO_PKG_VERSION"));
     let anchor_full = params.upscale_smallest
         || params.downscale_largest
-        || params.crop_to_smallest
-        || params.pad_to_largest;
+        || params.crop_to_smallest.is_on()
+        || params.pad_to_largest.is_on();
 
     let mut out = Vec::with_capacity(sources.len());
     for (k, place) in placed.into_iter().enumerate() {
