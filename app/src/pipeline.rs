@@ -82,40 +82,48 @@ pub fn plan_sizes(dims: &[(u32, u32)], opts: &ScaleOpts) -> ((u32, u32), Rgba<u8
     let areas: Vec<u64> = dims.iter().map(|&(w, h)| w as u64 * h as u64).collect();
     let smallest = dims[argmin(&areas)];
     let largest = dims[argmax(&areas)];
-    let bbox = (
-        dims.iter().map(|d| d.0).max().unwrap_or(1),
-        dims.iter().map(|d| d.1).max().unwrap_or(1),
-    );
 
-    if opts.upscale {
-        let fits = dims
-            .iter()
-            .map(|&d| {
-                let (w, h) = fit_dims(d, largest);
-                Fit::Scale(w, h, opts.up_algo.clone())
-            })
-            .collect();
-        (largest, TRANSPARENT, fits)
+    // Stage 1 - scaling. Fit each source (preserving aspect ratio) into the smallest or largest
+    // source's box, or leave it be. This is independent of pad/crop below, so scale and pad/crop
+    // can be enabled together to align sources that differ in BOTH resolution and aspect ratio.
+    let (algo, target) = if opts.upscale {
+        (Some(&opts.up_algo), Some(largest))
     } else if opts.downscale {
-        let fits = dims
-            .iter()
-            .map(|&d| {
-                let (w, h) = fit_dims(d, smallest);
-                Fit::Scale(w, h, opts.down_algo.clone())
-            })
-            .collect();
-        (smallest, TRANSPARENT, fits)
-    } else if opts.crop_to_smallest {
-        let fits = dims
-            .iter()
-            .map(|&d| Fit::CropCenter(smallest.0.min(d.0), smallest.1.min(d.1)))
-            .collect();
-        (smallest, TRANSPARENT, fits)
-    } else if opts.pad_to_largest {
-        (largest, BLACK, dims.iter().map(|_| Fit::None).collect())
+        (Some(&opts.down_algo), Some(smallest))
     } else {
-        (bbox, TRANSPARENT, dims.iter().map(|_| Fit::None).collect())
-    }
+        (None, None)
+    };
+    let scaled: Vec<(u32, u32)> = dims.iter().map(|&d| target.map_or(d, |t| fit_dims(d, t))).collect();
+
+    // Stage 2 - reconcile the differences that remain after scaling (unequal sizes, aspect-ratio
+    // mismatch). Pad grows every source to the shared bounding box on black; crop trims every
+    // source down to the common area they all cover; neither leaves the leftover transparent.
+    let bbox = (
+        scaled.iter().map(|d| d.0).max().unwrap_or(1),
+        scaled.iter().map(|d| d.1).max().unwrap_or(1),
+    );
+    let (canvas, fill, crop) = if opts.crop_to_smallest {
+        let common = (
+            scaled.iter().map(|d| d.0).min().unwrap_or(1),
+            scaled.iter().map(|d| d.1).min().unwrap_or(1),
+        );
+        (common, TRANSPARENT, Some(common))
+    } else if opts.pad_to_largest {
+        (bbox, BLACK, None)
+    } else {
+        (bbox, TRANSPARENT, None)
+    };
+
+    let fits = dims
+        .iter()
+        .zip(&scaled)
+        .map(|(&d, &sd)| Fit {
+            scale: (sd != d).then(|| (sd.0, sd.1, algo.cloned().unwrap_or_default())),
+            crop: crop.map(|(cw, ch)| (cw.min(sd.0), ch.min(sd.1))),
+        })
+        .collect();
+
+    (canvas, fill, fits)
 }
 
 pub fn place_on_canvas(img: &RgbaImage, canvas: (u32, u32), fill: Rgba<u8>) -> Placed {

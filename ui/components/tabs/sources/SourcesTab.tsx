@@ -330,11 +330,7 @@ function ResolutionPage() {
         <CheckboxField
           checked={settings.upscaleSmallest}
           onCheckedChange={(v) =>
-            patch(
-              v
-                ? { upscaleSmallest: true, downscaleLargest: false, cropToSmallest: false, padToLargest: false }
-                : { upscaleSmallest: false },
-            )
+            patch(v ? { upscaleSmallest: true, downscaleLargest: false } : { upscaleSmallest: false })
           }
           label="Upscale smallest source"
         />
@@ -351,11 +347,7 @@ function ResolutionPage() {
         <CheckboxField
           checked={settings.downscaleLargest}
           onCheckedChange={(v) =>
-            patch(
-              v
-                ? { downscaleLargest: true, upscaleSmallest: false, cropToSmallest: false, padToLargest: false }
-                : { downscaleLargest: false },
-            )
+            patch(v ? { downscaleLargest: true, upscaleSmallest: false } : { downscaleLargest: false })
           }
           label="Downscale largest source"
         />
@@ -371,26 +363,18 @@ function ResolutionPage() {
       <CheckboxField
         checked={settings.padToLargest}
         onCheckedChange={(v) =>
-          patch(
-            v
-              ? { padToLargest: true, upscaleSmallest: false, downscaleLargest: false, cropToSmallest: false }
-              : { padToLargest: false },
-          )
+          patch(v ? { padToLargest: true, cropToSmallest: false } : { padToLargest: false })
         }
         label="Pad to largest source"
-        description="Center the smallest source on black at the largest source's resolution, aligning both without scaling or losing any detail."
+        description="Center each source on black, filling out to the largest source's bounding box. No detail is lost. Combine with upscale/downscale to align sources of differing aspect ratios (e.g. pillarbox a 4:3 source among 16:9 ones)."
       />
       <CheckboxField
         checked={settings.cropToSmallest}
         onCheckedChange={(v) =>
-          patch(
-            v
-              ? { cropToSmallest: true, upscaleSmallest: false, downscaleLargest: false, padToLargest: false }
-              : { cropToSmallest: false },
-          )
+          patch(v ? { cropToSmallest: true, padToLargest: false } : { cropToSmallest: false })
         }
         label="Crop to smallest source"
-        description="Center-crop the largest source down to the smallest source's resolution, aligning both without scaling. Trims edge detail off the larger source."
+        description="Center-crop every source down to the common area they all share, aligning them edge-to-edge with no bars. Trims edge detail off the larger sources. Combine with upscale/downscale to first match scale, then crop away the aspect-ratio difference."
       />
     </div>
   );

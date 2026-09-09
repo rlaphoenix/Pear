@@ -981,16 +981,20 @@ fn scale_label(params: &GenParams, src_dims: (u32, u32), target: (u32, u32)) -> 
     if src_dims == target {
         return None;
     }
-    let verb = if params.upscale_smallest {
-        "Upscaled"
+    let scale = if params.upscale_smallest {
+        Some("Upscaled")
     } else if params.downscale_largest {
-        "Downscaled"
-    } else if params.crop_to_smallest {
-        "Cropped"
-    } else if params.pad_to_largest {
-        "Padded"
+        Some("Downscaled")
     } else {
-        return None;
+        None
+    };
+    let verb = match (scale, params.crop_to_smallest, params.pad_to_largest) {
+        (Some(s), true, _) => format!("{s} & cropped"),
+        (Some(s), _, true) => format!("{s} & padded"),
+        (Some(s), _, _) => s.to_string(),
+        (None, true, _) => "Cropped".to_string(),
+        (None, _, true) => "Padded".to_string(),
+        (None, _, _) => return None,
     };
     Some(format!("{verb} to {}×{}", target.0, target.1))
 }
