@@ -381,6 +381,7 @@ interface MarginOpt {
   end: number;
 }
 export interface SavedSource {
+  script: string;
   crop: Crop;
   segments: Segment[];
   size: number;

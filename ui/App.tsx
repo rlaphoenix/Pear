@@ -50,6 +50,8 @@ export default function App() {
     saveProject,
     removeRecentPath,
     closeProject,
+    scripts,
+    setScripts,
   } = useProject();
   const { base } = useTimebase();
   const {
@@ -63,7 +65,6 @@ export default function App() {
 
   const [tab, setTab] = useState<TabId>("preview");
   const [sourcePage, setSourcePage] = useState<SourceId>("");
-  const [scripts, setScripts] = useState<Record<SourceId, string>>({});
   const scriptFor = useCallback((id: SourceId) => scripts[id] ?? DEFAULT_SCRIPT, [scripts]);
 
   const [settingsOpen, setSettingsOpen] = useState(false);

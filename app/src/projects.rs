@@ -106,6 +106,8 @@ impl Default for TonemapOpt {
 #[serde(rename_all = "camelCase")]
 pub struct SavedSource {
     #[serde(default)]
+    pub script: String,
+    #[serde(default)]
     pub crop: Crop,
     #[serde(default)]
     pub segments: Vec<Segment>,

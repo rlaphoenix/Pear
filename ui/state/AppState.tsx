@@ -54,6 +54,8 @@ import {
   unlockProject,
   SavedSource,
   SourcePath,
+  SourceId,
+  DEFAULT_SCRIPT,
   ScriptTemplate,
   Segment,
   SourceInfo,
@@ -216,6 +218,14 @@ function useSettings() {
   const vsprobeRef = useRef<(src: UiSource) => void>(() => {});
   const savedSources = useRef<Record<SourcePath, SavedSource>>({});
   const loaded = useRef(false);
+
+  // Per-source VapourSynth scripts, keyed by the source's (session-local) id. Kept here rather
+  // than in App so save/load and dirty-tracking see them - toConfig folds each into its SavedSource.
+  const [scripts, setScripts] = useState<Record<SourceId, string>>({});
+  const scriptsRef = useRef(scripts);
+  useEffect(() => {
+    scriptsRef.current = scripts;
+  });
 
   const refreshRecents = useCallback(async () => {
     try {
@@ -477,8 +487,14 @@ function useSettings() {
         gutterWidth: cfg.gutterWidth ?? 120,
         sources: sourceKeys.map((k) => applySaved(k, savedSources.current)),
       };
+      const loadedScripts: Record<SourceId, string> = {};
+      for (const src of applied.sources) {
+        if (src.path)
+          loadedScripts[src.id] = savedSources.current[src.path]?.script ?? DEFAULT_SCRIPT;
+      }
       setSettings(applied);
-      savedSnapshot.current = dirtyBasis(toConfig(applied, savedSources.current));
+      setScripts(loadedScripts);
+      savedSnapshot.current = dirtyBasis(toConfig(applied, loadedScripts));
       setProjectPath(path);
       setProjectName(cfg.name ?? "");
       for (const src of applied.sources) if (src.path) void vsprobe(src);
@@ -493,7 +509,7 @@ function useSettings() {
   const saveProject = useCallback(
     async (path: string, name: string, thumbnail = "") => {
       const s = settingsRef.current;
-      const cfg = toConfig(s, savedSources.current);
+      const cfg = toConfig(s, scriptsRef.current);
       const snapshot = dirtyBasis(cfg);
       await Promise.all(
         Object.keys(cfg.sources).map(async (p) => {
@@ -769,7 +785,7 @@ function useSettings() {
     setTemplates((ts) => ts.filter((t) => t.name !== name));
   }, []);
 
-  const currentConfigStr = dirtyBasis(toConfig(settings, savedSources.current));
+  const currentConfigStr = dirtyBasis(toConfig(settings, scripts));
   const dirty =
     savedSnapshot.current === null ? true : currentConfigStr !== savedSnapshot.current;
 
@@ -824,6 +840,8 @@ function useSettings() {
     saveProject,
     removeRecentPath,
     closeProject,
+    scripts,
+    setScripts,
   };
 }
 
@@ -905,6 +923,7 @@ function rememberSource(
   saved.current = {
     ...saved.current,
     [src.path]: {
+      script: prev?.script ?? DEFAULT_SCRIPT,
       crop: src.crop,
       segments: src.segments,
       size: prev?.size ?? 0,
@@ -923,11 +942,12 @@ function rememberSource(
   };
 }
 
-function toConfig(s: Settings, _saved: Record<SourcePath, SavedSource>): Config {
+function toConfig(s: Settings, scripts: Record<SourceId, string>): Config {
   const sources: Record<SourcePath, SavedSource> = {};
   for (const src of s.sources) {
     if (src.path)
       sources[src.path] = {
+        script: scripts[src.id] ?? DEFAULT_SCRIPT,
         crop: src.crop,
         segments: src.segments,
         size: 0,
