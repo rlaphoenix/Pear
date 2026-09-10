@@ -1,12 +1,13 @@
 import { cn } from "@/lib/utils";
 import { SourceBadge } from "@/components/SourceBadge";
 import type { UiSource } from "@/state/AppState";
-import { LANE_H, RULER_H, trackLabel } from "@/lib/timeline";
+import { RULER_H, trackLabel } from "@/lib/timeline";
 
 interface GutterProps {
   sources: UiSource[];
   labels: string[];
   gutterW: number;
+  laneH: number;
   labelRef: React.MutableRefObject<HTMLSpanElement | null>;
   abRef: React.MutableRefObject<HTMLSpanElement | null>;
   onResize: (e: React.PointerEvent) => void;
@@ -16,6 +17,7 @@ export function TimelineGutter({
   sources,
   labels,
   gutterW,
+  laneH,
   labelRef,
   abRef,
   onResize,
@@ -30,7 +32,7 @@ export function TimelineGutter({
         return (
           <div
             key={source.id}
-            style={{ height: LANE_H }}
+            style={{ height: laneH }}
             className="flex items-center gap-2 border-b border-border/60 pl-2 pr-[18px]"
           >
             <SourceBadge
@@ -54,7 +56,7 @@ export function TimelineGutter({
 
       <div
         className="absolute top-0 right-1 z-30 w-1.5 cursor-col-resize bg-primary/25 transition-colors hover:bg-primary/60"
-        style={{ height: RULER_H + LANE_H * sources.length }}
+        style={{ height: RULER_H + laneH * sources.length }}
         onPointerDown={onResize}
         title="Drag to resize the track name area"
       />

@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 import type { GenParams } from "@/lib/tauri";
 import type { UiSource } from "@/state/AppState";
-import { HANDLE, LANE_H } from "@/lib/timeline";
+import { HANDLE } from "@/lib/timeline";
 import type { Menu, Sel, Tool } from "@/lib/timeline";
 import { SegThumb } from "./TimelineThumbnail";
 import type { TimelineViewport } from "@/hooks/useTimelineViewport";
@@ -19,6 +19,7 @@ interface LaneProps {
   renaming: Sel | null;
   setRenaming: (s: Sel | null) => void;
   onSelectSource: (i: number) => void;
+  laneH: number;
   view: TimelineViewport;
   edit: TimelineEditing;
 }
@@ -35,6 +36,7 @@ export function TimelineLane({
   renaming,
   setRenaming,
   onSelectSource,
+  laneH,
   view,
   edit,
 }: LaneProps) {
@@ -45,7 +47,7 @@ export function TimelineLane({
   return (
     <div
       className="relative border-b border-border/60 bg-[#0c0c0f]"
-      style={{ height: LANE_H }}
+      style={{ height: laneH }}
       onPointerDown={() => setSel(null)}
     >
       {segs.map((s, i) => {

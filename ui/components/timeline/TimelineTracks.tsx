@@ -2,7 +2,7 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 import type { GenParams } from "@/lib/tauri";
 import type { UiSource } from "@/state/AppState";
-import { GUIDE_PREVIEW_W, LANE_H, RULER_H } from "@/lib/timeline";
+import { GUIDE_PREVIEW_W, RULER_H } from "@/lib/timeline";
 import type { Menu, Sel, Tool } from "@/lib/timeline";
 import { GuidePreview } from "./TimelineGuide";
 import { TimelineLane } from "./TimelineLane";
@@ -13,6 +13,7 @@ interface TracksProps {
   sources: UiSource[];
   params: GenParams;
   paramsKey: string;
+  laneH: number;
   base: number;
   tool: Tool;
   sel: Sel | null;
@@ -29,6 +30,7 @@ export function TimelineTracks({
   sources,
   params,
   paramsKey,
+  laneH,
   base,
   tool,
   sel,
@@ -109,6 +111,7 @@ export function TimelineTracks({
               renaming={renaming}
               setRenaming={setRenaming}
               onSelectSource={onSelectSource}
+              laneH={laneH}
               view={view}
               edit={edit}
             />
@@ -121,7 +124,7 @@ export function TimelineTracks({
             const lineX = xOf(t);
             const lineTop = hover.overRuler ? 0 : RULER_H;
             const lineHeight =
-              (hover.overRuler ? RULER_H : 0) + LANE_H * sources.length;
+              (hover.overRuler ? RULER_H : 0) + laneH * sources.length;
             const lineColor = tool === "razor" ? "bg-red-400" : "bg-gray-400";
             const fitsRight = lineX + 1 + GUIDE_PREVIEW_W <= scrollLeft + viewW;
             return (
@@ -135,7 +138,7 @@ export function TimelineTracks({
                   const seg = source.segments.find((s) => t > s.pos && t < s.pos + s.len);
                   if (!seg) return null;
                   const srcFrame = seg.src + (t - seg.pos);
-                  const top = RULER_H + idx * LANE_H;
+                  const top = RULER_H + idx * laneH;
                   const style: React.CSSProperties = fitsRight
                     ? { left: lineX + 1, top }
                     : { right: scrollW - lineX, top };
@@ -146,7 +149,7 @@ export function TimelineTracks({
                       paramsKey={paramsKey}
                       source={idx}
                       frame={srcFrame}
-                      height={LANE_H}
+                      height={laneH}
                       style={style}
                     />
                   );
@@ -157,7 +160,7 @@ export function TimelineTracks({
 
         <div
           className="pointer-events-none absolute top-0 z-30 w-px bg-primary"
-          style={{ left: xOf(base), height: RULER_H + LANE_H * sources.length }}
+          style={{ left: xOf(base), height: RULER_H + laneH * sources.length }}
         >
           <div className="absolute -left-[3px] top-0 size-0 border-x-[3px] border-t-[5px] border-x-transparent border-t-primary" />
         </div>

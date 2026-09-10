@@ -5,6 +5,7 @@ import type { UiSource } from "@/state/AppState";
 
 export const RULER_H = 22;
 export const LANE_H = 62;
+export const LANE_MIN = 20;
 export const GUTTER_W = 120;
 export const GUTTER_MIN = 96;
 export const HANDLE = 6;

@@ -30,9 +30,11 @@ interface ToolbarProps {
   zoom: (factor: number) => void;
   collapsed: boolean;
   setCollapsed: (fn: (c: boolean) => boolean) => void;
+  className?: string;
 }
 
 export function TimelineToolbar({
+  className,
   tool,
   setTool,
   splitSelected,
@@ -59,7 +61,7 @@ export function TimelineToolbar({
   );
 
   return (
-    <div className="flex h-9 items-center gap-1.5 border-b border-border px-2">
+    <div className={cn("flex h-9 items-center gap-1.5 border-b border-border px-2", className)}>
       {toolBtn(
         "select",
         <MousePointer2 className="size-3.5" />,

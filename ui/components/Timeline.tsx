@@ -5,7 +5,7 @@ import { clampNum } from "@/lib/frames";
 import { useProject } from "@/state/AppState";
 import { useTimebase } from "@/state/TimebaseContext";
 import { usePreview } from "@/state/PreviewContext";
-import { GUTTER_MIN, GUTTER_W, measureText, trackLabel } from "@/lib/timeline";
+import { GUTTER_MIN, GUTTER_W, LANE_H, LANE_MIN, measureText, trackLabel } from "@/lib/timeline";
 import type { Menu, Sel, Tool } from "@/lib/timeline";
 import { useTimelineHistory } from "@/hooks/useTimelineHistory";
 import { useTimelineViewport } from "@/hooks/useTimelineViewport";
@@ -43,6 +43,8 @@ export function Timeline({ params, paramsKey, active }: Props) {
     selRef.current = sel;
   });
   const [collapsed, setCollapsed] = useState(false);
+  const [laneH, setLaneH] = useState(LANE_H);
+  const vdrag = useRef({ startY: 0, startTotal: 0, active: false, moved: false });
   const [menu, setMenu] = useState<Menu | null>(null);
   const [renaming, setRenaming] = useState<Sel | null>(null);
 
@@ -135,6 +137,37 @@ export function Timeline({ params, paramsKey, active }: Props) {
     window.addEventListener("pointerup", onUp);
   };
 
+  const vResizeDown = (e: React.PointerEvent) => {
+    e.preventDefault();
+    const n = Math.max(1, sources.length);
+    vdrag.current = { startY: e.clientY, startTotal: collapsed ? 0 : laneH * n, active: true, moved: false };
+    try {
+      (e.currentTarget as Element).setPointerCapture(e.pointerId);
+    } catch {}
+  };
+  const vResizeMove = (e: React.PointerEvent) => {
+    if (!vdrag.current.active) return;
+    const dy = e.clientY - vdrag.current.startY;
+    if (Math.abs(dy) > 3) vdrag.current.moved = true;
+    const n = Math.max(1, sources.length);
+    const next = (vdrag.current.startTotal - dy) / n;
+    if (next < LANE_MIN) {
+      setCollapsed(true);
+    } else {
+      setCollapsed(false);
+      setLaneH(clampNum(next, LANE_MIN, LANE_H));
+    }
+  };
+  const vResizeUp = (e: React.PointerEvent) => {
+    if (!vdrag.current.active) return;
+    const wasDrag = vdrag.current.moved;
+    vdrag.current.active = false;
+    try {
+      (e.currentTarget as Element).releasePointerCapture(e.pointerId);
+    } catch {}
+    if (!wasDrag) setCollapsed((c) => !c);
+  };
+
   const labels = sources.map((s) => trackLabel(s) || "No source");
   const labelsKey = labels.join("\n");
 
@@ -154,8 +187,20 @@ export function Timeline({ params, paramsKey, active }: Props) {
   const deleteDisabled = !sel || edit.segsOf(sel.id).length <= 1;
 
   return (
-    <div className="flex shrink-0 flex-col border-t border-border bg-panel">
+    <div className="relative flex shrink-0 flex-col border-t border-border bg-panel">
+      <div
+        onPointerDown={vResizeDown}
+        onPointerMove={vResizeMove}
+        onPointerUp={vResizeUp}
+        onPointerCancel={vResizeUp}
+        title="Drag to resize (click to toggle)"
+        className="group absolute inset-x-0 -top-1 z-20 flex h-3 cursor-ns-resize touch-none items-center justify-center"
+      >
+        <div className="h-0.5 w-full bg-transparent transition-colors group-hover:bg-primary/60" />
+      </div>
+
       <TimelineToolbar
+        className={cn(collapsed && "hidden")}
         tool={tool}
         setTool={setTool}
         splitSelected={edit.splitSelected}
@@ -179,6 +224,7 @@ export function Timeline({ params, paramsKey, active }: Props) {
             sources={sources}
             labels={labels}
             gutterW={gutterW}
+            laneH={laneH}
             labelRef={labelRef}
             abRef={abRef}
             onResize={startGutterResize}
@@ -187,6 +233,7 @@ export function Timeline({ params, paramsKey, active }: Props) {
             sources={sources}
             params={params}
             paramsKey={paramsKey}
+            laneH={laneH}
             base={base}
             tool={tool}
             sel={sel}
