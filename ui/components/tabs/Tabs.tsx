@@ -17,6 +17,7 @@ import {
   type TabId,
 } from "@/lib/tauri";
 import { type useIndexingStatus } from "@/hooks/useIndexingStatus";
+import { type WarmProgress } from "@/hooks/useSourceWarmup";
 import { type UiSource } from "@/state/AppState";
 import { type useMarkup } from "@/hooks/useMarkup";
 import { type useComparisonsResize } from "@/hooks/useComparisonsResize";
@@ -33,6 +34,7 @@ type Props = {
   ready: boolean;
   initializing: boolean;
   indexingStatus: ReturnType<typeof useIndexingStatus>;
+  warming: WarmProgress | null;
   loadDetail: string | null;
   previewRef: RefObject<PreviewTabHandle | null>;
   onAddCurrentComparison: () => void;
@@ -74,6 +76,7 @@ export function Tabs({
   ready,
   initializing,
   indexingStatus,
+  warming,
   loadDetail,
   previewRef,
   onAddCurrentComparison,
@@ -174,7 +177,12 @@ export function Tabs({
         </div>
       )}
 
-      <LoadingView initializing={initializing} indexing={indexingStatus} detail={loadDetail} />
+      <LoadingView
+        initializing={initializing}
+        indexing={indexingStatus}
+        warming={warming}
+        detail={loadDetail}
+      />
     </div>
   );
 }

@@ -13,6 +13,7 @@ import { DEFAULT_SCRIPT, saveAll, uploadComparison, TAB_IDS, type ComparisonInde
 import { type PreviewMode } from "@/lib/preview";
 import { exportMarkup } from "@/lib/markup";
 import { useGenParams } from "@/hooks/useGenParams";
+import { useSourceWarmup } from "@/hooks/useSourceWarmup";
 import { useComparisons } from "@/hooks/useComparisons";
 import { usePreviewRender } from "@/hooks/usePreviewRender";
 import { useMarkup } from "@/hooks/useMarkup";
@@ -118,6 +119,7 @@ export default function App() {
   const dragOver = useDragDrop(addSources);
 
   const { params, frameKey } = useGenParams(settings, scripts, appSettings);
+  const warming = useSourceWarmup(params, ready && !initializing);
 
   const {
     selectedIndex,
@@ -256,6 +258,7 @@ export default function App() {
         ready={ready}
         initializing={initializing}
         indexingStatus={indexingStatus}
+        warming={warming}
         loadDetail={loadDetail}
         previewRef={previewRef}
         onAddCurrentComparison={onAddCurrentComparison}

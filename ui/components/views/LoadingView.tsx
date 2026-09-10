@@ -1,19 +1,21 @@
 import { useEffect, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { WarmProgress } from "@/hooks/useSourceWarmup";
 
 const FADE_MS = 1000;
 
 interface Props {
   initializing: boolean;
   indexing: { name: string | null; percent: number | null; current: number; total: number };
+  warming?: WarmProgress | null;
   detail?: string | null;
 }
 
-export function LoadingView({ initializing, indexing, detail }: Props) {
+export function LoadingView({ initializing, indexing, warming, detail }: Props) {
   const pct =
     typeof indexing.percent === "number" ? Math.max(0, Math.min(100, indexing.percent)) : null;
-  const active = initializing || pct !== null;
+  const active = initializing || pct !== null || warming != null;
 
   const [rendered, setRendered] = useState(active);
   useEffect(() => {
@@ -25,11 +27,11 @@ export function LoadingView({ initializing, indexing, detail }: Props) {
     return () => window.clearTimeout(t);
   }, [active]);
 
-  const shown = useRef({ pct, indexing, detail });
+  const shown = useRef({ pct, indexing, warming, detail });
   useEffect(() => {
-    if (active) shown.current = { pct, indexing, detail };
+    if (active) shown.current = { pct, indexing, warming, detail };
   });
-  const s = active ? { pct, indexing, detail } : shown.current;
+  const s = active ? { pct, indexing, warming, detail } : shown.current;
 
   if (!active && !rendered) return null;
 
@@ -61,6 +63,31 @@ export function LoadingView({ initializing, indexing, detail }: Props) {
             Building the frame index - the first load of a file can take a while.
           </div>
         </div>
+      ) : s.warming ? (
+        s.warming.total > 1 ? (
+          <div className="flex w-max min-w-96 max-w-[90%] flex-col gap-1.5">
+            <div className="mb-1.5 text-center text-base font-semibold text-foreground/90">
+              Warming sources ({s.warming.done}/{s.warming.total})
+            </div>
+            <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/15">
+              <div
+                className="h-full rounded-full bg-primary transition-[width] duration-200"
+                style={{ width: `${(s.warming.done / s.warming.total) * 100}%` }}
+              />
+            </div>
+            <div className="text-xs leading-relaxed text-foreground/70">
+              Pre-decoding each source once so seeking and switching are faster.
+            </div>
+          </div>
+        ) : (
+          <>
+            <Loader2 className="size-7 animate-spin text-primary" />
+            <div className="text-center text-sm text-foreground/80">Warming source…</div>
+            <div className="text-center text-xs text-foreground/60">
+              Pre-decoding it once so seeking is faster.
+            </div>
+          </>
+        )
       ) : (
         <>
           <Loader2 className="size-7 animate-spin text-primary" />
