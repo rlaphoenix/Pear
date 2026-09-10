@@ -437,6 +437,10 @@ pub struct ImgMeta {
     pub frame_type: String,
     pub orig_w: u32,
     pub orig_h: u32,
+    pub render_w: u32,
+    pub render_h: u32,
+    pub fmt: String,
+    pub fps: f64,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -505,11 +509,11 @@ fn get_frame_type(
     if let Some(t) = state.type_cache.lock().unwrap().get(&key) {
         return Ok(t.clone());
     }
-    let (_img, ftype) = request_frames(params, infos, fits, &[source], &[idx], None)?
+    let (_img, fmeta) = request_frames(params, infos, fits, &[source], &[idx], None)?
         .pop()
         .ok_or("VapourSynth produced no frame")?;
-    state.type_cache.lock().unwrap().insert(key, ftype.clone());
-    Ok(ftype)
+    state.type_cache.lock().unwrap().insert(key, fmeta.pict.clone());
+    Ok(fmeta.pict)
 }
 
 fn overlap_frames(sources: &[SourceParams]) -> Vec<u64> {
@@ -1136,7 +1140,7 @@ fn request_frames(
     sources: &[usize],
     frames: &[u64],
     req_cancel: Option<&AtomicBool>,
-) -> Result<Vec<(RgbaImage, String)>, String> {
+) -> Result<Vec<(RgbaImage, vapoursynth::FrameMeta)>, String> {
     let n = sources.len();
     if n == 0 {
         return Ok(Vec::new());
@@ -1219,12 +1223,14 @@ fn composite_frames(
     fill: image::Rgba<u8>,
     sources: &[usize],
     frames: &[u64],
-    fetched: Vec<(RgbaImage, String)>,
+    fetched: Vec<(RgbaImage, vapoursynth::FrameMeta)>,
     info_box: bool,
     watermark: bool,
 ) -> Vec<(RgbaImage, ImgMeta)> {
     let target = canvas;
-    let types: Vec<String> = fetched.iter().map(|(_, t)| t.clone()).collect();
+    let types: Vec<String> = fetched.iter().map(|(_, m)| m.pict.clone()).collect();
+    let render_dims: Vec<(u32, u32)> = fetched.iter().map(|(img, _)| img.dimensions()).collect();
+    let vs_meta: Vec<vapoursynth::FrameMeta> = fetched.iter().map(|(_, m)| m.clone()).collect();
     let placed: Vec<pipeline::Placed> = fetched
         .iter()
         .map(|(img, _)| pipeline::place_on_canvas(img, canvas, fill))
@@ -1301,6 +1307,10 @@ fn composite_frames(
             frame_type: types[k].clone(),
             orig_w: disp_dims[s].0,
             orig_h: disp_dims[s].1,
+            render_w: render_dims[k].0,
+            render_h: render_dims[k].1,
+            fmt: vs_meta[k].fmt.clone(),
+            fps: vs_meta[k].fps,
         };
         out.push((img, meta));
     }
@@ -1465,7 +1475,7 @@ pub async fn render(
             fetched
                 .into_iter()
                 .enumerate()
-                .map(|(k, (img, ftype))| {
+                .map(|(k, (img, fmeta))| {
                     let s = sources[k];
                     let (w, h) = img.dimensions();
                     let meta = ImgMeta {
@@ -1473,9 +1483,13 @@ pub async fn render(
                         path: params.sources[s].path.clone(),
                         frame_num: frames[k],
                         total: infos[s].total,
-                        frame_type: ftype,
+                        frame_type: fmeta.pict,
                         orig_w: w,
                         orig_h: h,
+                        render_w: w,
+                        render_h: h,
+                        fmt: fmeta.fmt,
+                        fps: fmeta.fps,
                     };
                     (img, meta)
                 })

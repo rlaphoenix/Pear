@@ -6,7 +6,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Condvar, Mutex, OnceLock};
 
 use vapoursynth::api::API;
-use vapoursynth::map::{Error as MapError, OwnedMap};
+use vapoursynth::map::OwnedMap;
 use vapoursynth::prelude::*;
 use vapoursynth::video_info::{Framerate, Resolution};
 
@@ -820,6 +820,13 @@ pub struct FetchReq {
     pub label: String,
 }
 
+#[derive(Clone, Default)]
+pub struct FrameMeta {
+    pub pict: String,
+    pub fmt: String,
+    pub fps: f64,
+}
+
 /// Callbacks run on VapourSynth worker threads: `env` (and the nodes) MUST outlive every
 /// callback, which the caller guarantees by holding it for the whole call.
 fn fetch_async(
@@ -827,7 +834,7 @@ fn fetch_async(
     reqs: &[FetchReq],
     cancel: &AtomicBool,
     req_cancel: Option<&AtomicBool>,
-) -> Result<Vec<(RgbaImage, String)>, String> {
+) -> Result<Vec<(RgbaImage, FrameMeta)>, String> {
     if reqs.is_empty() {
         return Ok(Vec::new());
     }
@@ -843,7 +850,7 @@ fn fetch_async(
     }
 
     let n = reqs.len();
-    type Slot = Option<Result<(RgbaImage, String), String>>;
+    type Slot = Option<Result<(RgbaImage, FrameMeta), String>>;
     let slots: Arc<Mutex<Vec<Slot>>> = Arc::new(Mutex::new((0..n).map(|_| None).collect()));
     let remaining = Arc::new((Mutex::new(n), Condvar::new()));
 
@@ -871,7 +878,7 @@ fn fetch_async(
             let out = match res {
                 Ok(f) => match f.props().get_data("_rls_error") {
                     Ok(msg) => Err(String::from_utf8_lossy(msg).into_owned()),
-                    Err(_) => frame_to_rgba(&f).map(|img| (img, pict_char(&f))),
+                    Err(_) => frame_to_rgba(&f).map(|img| (img, frame_meta(&f))),
                 },
                 Err(e) => Err(format!("{label}: {e}")),
             };
@@ -911,7 +918,7 @@ pub fn extract_frames(
     specs: &[FrameSpec],
     reqs: &[FetchReq],
     req_cancel: Option<&AtomicBool>,
-) -> Result<Vec<(RgbaImage, String)>, String> {
+) -> Result<Vec<(RgbaImage, FrameMeta)>, String> {
     ensure_supported()?;
     if reqs.is_empty() {
         return Ok(Vec::new());
@@ -943,12 +950,18 @@ fn frame_to_rgba(frame: &FrameRef) -> Result<RgbaImage, String> {
     RgbaImage::from_raw(w as u32, h as u32, buf).ok_or_else(|| "RGBA buffer size mismatch".into())
 }
 
-fn pict_char(frame: &FrameRef) -> String {
-    match frame.props().get_data("_PictType") {
-        Ok(bytes) => bytes.first().map(|&b| (b as char).to_string()).unwrap_or_else(|| "?".into()),
-        Err(MapError::KeyNotFound) => "?".into(),
-        Err(_) => "?".into(),
-    }
+fn frame_meta(frame: &FrameRef) -> FrameMeta {
+    let props = frame.props();
+    let pict = props
+        .get_data("_PictType")
+        .ok()
+        .and_then(|b| b.first().map(|&c| (c as char).to_string()))
+        .unwrap_or_else(|| "?".into());
+    let fmt = frame.format().name().to_string();
+    let num = props.get_int("_DurationNum").unwrap_or(0);
+    let den = props.get_int("_DurationDen").unwrap_or(0);
+    let fps = if num > 0 { den as f64 / num as f64 } else { 0.0 };
+    FrameMeta { pict, fmt, fps }
 }
 
 fn vs_kernel(name: &str) -> &'static str {

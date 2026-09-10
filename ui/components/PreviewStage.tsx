@@ -251,6 +251,29 @@ export function PreviewStage({
         </>
       )}
 
+      {comparison &&
+        (() => {
+          const a = sources[activeSource] ?? sources[0];
+          if (!a) return null;
+          const parts = [
+            a.meta.fps > 0 ? `${Number(a.meta.fps.toFixed(3))} fps` : null,
+            `${a.meta.renderW}×${a.meta.renderH}`,
+            a.meta.fmt || null,
+          ].filter((p): p is string => p != null);
+          return (
+            <div className="pointer-events-none absolute left-2 top-2 z-20 flex items-center gap-2">
+              {parts.map((p, i) => (
+                <span
+                  key={i}
+                  className="flex h-7 items-center bg-black/60 px-2 font-mono text-[11px] tabular-nums text-white/90"
+                >
+                  {p}
+                </span>
+              ))}
+            </div>
+          );
+        })()}
+
       <div className="absolute right-2 top-2 z-20 flex items-center gap-2">
         {comparison && (
           <button

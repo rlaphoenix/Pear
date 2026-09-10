@@ -317,6 +317,10 @@ interface ImgMeta {
   frameType: string;
   origW: number;
   origH: number;
+  renderW: number;
+  renderH: number;
+  fmt: string;
+  fps: number;
 }
 
 export interface SourceOut {
