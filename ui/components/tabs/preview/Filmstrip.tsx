@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SourceBadge } from "@/components/SourceBadge";
+import { ResizeHandle } from "@/components/primitives/resize-handle";
 import { render, nextRenderSeq, type GenParams, type ProjectFrame, type DataUrl } from "@/lib/tauri";
 
 interface Props {
@@ -50,7 +51,6 @@ export function Filmstrip({
   const ref = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
   const [height, setHeight] = useState(() => DEFAULT_BOX_H + ROW_PAD_Y);
-  const drag = useRef({ startY: 0, startH: 0, active: false, moved: false });
   const customized = useRef(false);
   const clampFrame = (v: number) => Math.max(0, Math.min(maxBase, v));
 
@@ -117,35 +117,14 @@ export function Filmstrip({
     if (!customized.current) setHeight(defaultHeight());
   }, [defaultHeight]);
 
-  const onResizeDown = (e: React.PointerEvent) => {
-    e.preventDefault();
-    drag.current = { startY: e.clientY, startH: height, active: true, moved: false };
-    try {
-      (e.currentTarget as Element).setPointerCapture(e.pointerId);
-    } catch {
-    }
+  const onResizeDrag = (next: number) => {
+    customized.current = true;
+    setHeight(clampHeight(next));
   };
-  const onResizeMove = (e: React.PointerEvent) => {
-    if (!drag.current.active) return;
-    const dy = e.clientY - drag.current.startY;
-    if (Math.abs(dy) > 3) {
-      drag.current.moved = true;
-      customized.current = true;
-    }
-    setHeight(clampHeight(drag.current.startH - dy));
-  };
-  const onResizeUp = (e: React.PointerEvent) => {
-    const wasDrag = drag.current.moved;
-    drag.current.active = false;
-    try {
-      (e.currentTarget as Element).releasePointerCapture(e.pointerId);
-    } catch {
-    }
-    if (!wasDrag) {
-      customized.current = true;
-      const collapsed = pack(height).boxH < MIN_BOX_H;
-      setHeight(collapsed ? defaultHeight() : clampHeight(COLLAPSED_H));
-    }
+  const onResizeToggle = () => {
+    customized.current = true;
+    const collapsed = pack(height).boxH < MIN_BOX_H;
+    setHeight(collapsed ? defaultHeight() : clampHeight(COLLAPSED_H));
   };
 
   const { boxH, boxW, count } = pack(height);
@@ -200,16 +179,7 @@ export function Filmstrip({
       style={{ height }}
       className={cn("relative shrink-0 border-t border-border", className)}
     >
-      <div
-        onPointerDown={onResizeDown}
-        onPointerMove={onResizeMove}
-        onPointerUp={onResizeUp}
-        onPointerCancel={onResizeUp}
-        title="Drag to resize (click to toggle)"
-        className="group absolute inset-x-0 -top-1 z-20 flex h-3 cursor-ns-resize touch-none items-center justify-center"
-      >
-        <div className="h-0.5 w-full bg-transparent transition-colors group-hover:bg-primary/60" />
-      </div>
+      <ResizeHandle value={height} onDrag={onResizeDrag} onToggle={onResizeToggle} />
 
       {showBoxes && (
         <div className="flex h-full flex-col">
