@@ -132,7 +132,7 @@ export function Filmstrip({
   const showBoxes = sourceCount > 0 && width > 0 && boxH >= MIN_BOX_H;
 
   useEffect(() => {
-    if (!ready || !active || sourceCount === 0) return;
+    if (!ready || !active || sourceCount === 0 || !showBoxes) return;
     let stale = false;
     const t = setTimeout(() => {
       if (filmGenKeyRef.current !== paramsKey) {
@@ -171,7 +171,7 @@ export function Filmstrip({
       stale = true;
       clearTimeout(t);
     };
-  }, [base, paramsKey, params, ready, active, maxBase, span, sourceCount]);
+  }, [base, paramsKey, params, ready, active, maxBase, span, sourceCount, showBoxes]);
 
   return (
     <div
