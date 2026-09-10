@@ -55,7 +55,7 @@ import {
   SavedSource,
   SourcePath,
   SourceId,
-  DEFAULT_SCRIPT,
+  scriptIsActive,
   ScriptTemplate,
   Segment,
   SourceInfo,
@@ -489,8 +489,8 @@ function useSettings() {
       };
       const loadedScripts: Record<SourceId, string> = {};
       for (const src of applied.sources) {
-        if (src.path)
-          loadedScripts[src.id] = savedSources.current[src.path]?.script ?? DEFAULT_SCRIPT;
+        const saved = src.path ? savedSources.current[src.path]?.script : undefined;
+        if (saved && scriptIsActive(saved)) loadedScripts[src.id] = saved;
       }
       setSettings(applied);
       setScripts(loadedScripts);
@@ -923,7 +923,7 @@ function rememberSource(
   saved.current = {
     ...saved.current,
     [src.path]: {
-      script: prev?.script ?? DEFAULT_SCRIPT,
+      script: prev?.script ?? "",
       crop: src.crop,
       segments: src.segments,
       size: prev?.size ?? 0,
@@ -945,9 +945,10 @@ function rememberSource(
 function toConfig(s: Settings, scripts: Record<SourceId, string>): Config {
   const sources: Record<SourcePath, SavedSource> = {};
   for (const src of s.sources) {
-    if (src.path)
+    if (src.path) {
+      const cur = scripts[src.id] ?? "";
       sources[src.path] = {
-        script: scripts[src.id] ?? DEFAULT_SCRIPT,
+        script: scriptIsActive(cur) ? cur : "",
         crop: src.crop,
         segments: src.segments,
         size: 0,
@@ -963,6 +964,7 @@ function toConfig(s: Settings, scripts: Record<SourceId, string>): Config {
         tempoDecimator: src.tempoDecimator,
         tempoFps: src.tempoFps,
       };
+    }
   }
   return {
     comparisons: s.comparisons,

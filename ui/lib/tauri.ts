@@ -286,6 +286,13 @@ export const DEFAULT_SCRIPT = `# This is where you can make advanced edits using
 # clip = core.std.Levels(clip, min_in=30, max_in=218, min_out=16, max_out=235, planes=0)
 `;
 
+export function scriptIsActive(script: string): boolean {
+  return script.split(/\r?\n/).some((line) => {
+    const t = line.trim();
+    return t !== "" && !t.startsWith("#");
+  });
+}
+
 export interface GenParams {
   sources: SourceParams[];
   upscaleSmallest: boolean;
