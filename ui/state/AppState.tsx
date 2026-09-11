@@ -277,7 +277,10 @@ function useSettings() {
           weaveFrames: Math.max(1, Math.floor(prefs.weaveFrames ?? 1)),
           watermark: prefs.watermark ?? true,
           previewBg: { ...DEFAULT_PREVIEW_BG, ...(prefs.previewBg ?? {}) },
-          previewBorder: { ...DEFAULT_PREVIEW_BORDER, ...(prefs.previewBorder ?? {}) },
+          previewBorder: (() => {
+            const b = { ...DEFAULT_PREVIEW_BORDER, ...(prefs.previewBorder ?? {}) };
+            return { ...b, width: b.width || 1 };
+          })(),
           hwdevice: (prefs.hwdevice ?? "") as AppSettings["hwdevice"],
           hwfallback: prefs.hwfallback ?? true,
           checkForUpdates: prefs.checkForUpdates ?? true,

@@ -126,14 +126,13 @@ export function PreviewerSection({ draft, setDraft }: SectionProps) {
         <div className="flex flex-col gap-0.5">
           <span className="text-sm text-foreground/90">Border</span>
           <span className="text-xs text-muted-foreground">
-            Useful when the content blends into the background. To disable it, set the
-            Thickness to 0.
+            Useful when the content blends into the background.
           </span>
         </div>
         <RangeField
           label="Thickness"
           value={border.width}
-          min={0}
+          min={1}
           max={16}
           step={1}
           suffix="px"

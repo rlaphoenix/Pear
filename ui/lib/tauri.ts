@@ -487,7 +487,7 @@ export const DEFAULT_PREVIEW_BG: PreviewBg = {
 };
 
 export const DEFAULT_PREVIEW_BORDER: PreviewBorder = {
-  width: 0,
+  width: 1,
   radius: 0,
   color: "#3a3a42",
 };
