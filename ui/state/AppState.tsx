@@ -169,7 +169,7 @@ function useSettings() {
   const [projectName, setProjectName] = useState<string>("");
   const [appSettings, setAppSettings] = useState<AppSettings>({
     defaultCount: 20,
-    minDistance: 5,
+    minDistance: 2,
     marginStart: 0.02,
     marginEnd: 0.02,
     match: "Any",
@@ -256,7 +256,7 @@ function useSettings() {
         await refreshRecents();
         setAppSettings({
           defaultCount: prefs.defaultCount ?? 20,
-          minDistance: prefs.minDistance ?? 5,
+          minDistance: prefs.minDistance ?? 2,
           marginStart: prefs.margin?.start ?? 0.02,
           marginEnd: prefs.margin?.end ?? 0.02,
           match: kindToMatch(prefs.match),

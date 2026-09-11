@@ -17,7 +17,7 @@ fn default_count() -> u32 {
     20
 }
 fn default_min_distance() -> f64 {
-    5.0
+    2.0
 }
 fn default_margin() -> f64 {
     0.02
