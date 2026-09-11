@@ -44,6 +44,7 @@ import {
   recentProjectsMeta,
   type RecentProject,
   setUiState,
+  setGutterHeights as persistGutterHeights,
   markRecent,
   setLastProject,
   removeRecent,
@@ -64,6 +65,8 @@ import {
   buildInfo,
   type BuildInfo,
 } from "@/lib/tauri";
+import { LANE_H } from "@/lib/timeline";
+import { FILMSTRIP_ROW_H } from "@/components/tabs/preview/Filmstrip";
 import { MEDIA_EXTS } from "@/lib/utils";
 import { defaultSegments } from "@/lib/frames";
 import { toast } from "@/lib/toast";
@@ -140,6 +143,11 @@ const emptySource = (): UiSource => ({
   error: null,
 });
 
+export interface GutterHeights {
+  timelineLaneH: number;
+  filmstripRowH: number;
+}
+
 export const PROJECT_EXT = "pcp";
 
 function useSettings() {
@@ -203,6 +211,11 @@ function useSettings() {
     base: 0,
     lastProject: "",
   });
+  const [gutterHeights, setGutterHeights] = useState<GutterHeights>({
+    timelineLaneH: LANE_H,
+    filmstripRowH: FILMSTRIP_ROW_H,
+  });
+  const gutterHeightsRef = useRef(gutterHeights);
   const [prefsReady, setPrefsReady] = useState(false);
   const [buildInfoValue, setBuildInfoValue] = useState<BuildInfo | null>(null);
   useEffect(() => {
@@ -282,6 +295,12 @@ function useSettings() {
           base: prefs.seekBase ?? 0,
           lastProject: prefs.lastProject ?? "",
         });
+        const loadedHeights: GutterHeights = {
+          timelineLaneH: prefs.timelineLaneH ?? LANE_H,
+          filmstripRowH: prefs.filmstripRowH ?? FILMSTRIP_ROW_H,
+        };
+        gutterHeightsRef.current = loadedHeights;
+        setGutterHeights(loadedHeights);
       } finally {
         loaded.current = true;
         setPrefsReady(true);
@@ -291,6 +310,13 @@ function useSettings() {
 
   const saveUiState = useCallback((tab: string, previewMode: string, base: number) => {
     void setUiState(tab, previewMode, base);
+  }, []);
+
+  const saveGutterHeights = useCallback((partial: Partial<GutterHeights>) => {
+    const next = { ...gutterHeightsRef.current, ...partial };
+    gutterHeightsRef.current = next;
+    setGutterHeights(next);
+    persistGutterHeights(next.timelineLaneH, next.filmstripRowH);
   }, []);
 
   const saveAppSettings = useCallback(async (next: AppSettings) => {
@@ -801,6 +827,8 @@ function useSettings() {
     saveAppSettings,
     restoreUi,
     saveUiState,
+    gutterHeights,
+    saveGutterHeights,
     prefsReady,
     buildInfo: buildInfoValue,
     patch,

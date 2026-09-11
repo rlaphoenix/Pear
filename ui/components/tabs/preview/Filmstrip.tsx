@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { SourceBadge } from "@/components/SourceBadge";
 import { ResizeHandle } from "@/components/primitives/resize-handle";
 import { render, nextRenderSeq, type GenParams, type ProjectFrame, type DataUrl } from "@/lib/tauri";
+import { useProject } from "@/state/AppState";
 
 interface Props {
   base: number;
@@ -30,6 +31,8 @@ const ROW_PAD_Y = 16;
 const LABEL_W = 16;
 const THUMB_WIDTH = 240;
 
+export const FILMSTRIP_ROW_H = DEFAULT_BOX_H + ROW_PAD_Y;
+
 type Thumbs = Record<number, Record<ProjectFrame, DataUrl>>;
 const EMPTY_THUMBS: Thumbs = {};
 
@@ -47,11 +50,10 @@ export function Filmstrip({
   onSelectSource,
   className,
 }: Props) {
+  const { gutterHeights, saveGutterHeights } = useProject();
   const rows = Math.max(1, sourceCount);
   const ref = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
-  const [height, setHeight] = useState(() => DEFAULT_BOX_H + ROW_PAD_Y);
-  const customized = useRef(false);
   const clampFrame = (v: number) => Math.max(0, Math.min(maxBase, v));
 
   const [thumbCache, setThumbCache] = useState<{ key: string; frames: Thumbs }>(() => ({
@@ -96,35 +98,31 @@ export function Filmstrip({
   );
 
   const defaultHeight = useCallback(
-    () => clampHeight((DEFAULT_BOX_H + ROW_PAD_Y) * rows),
+    () => clampHeight(FILMSTRIP_ROW_H * rows),
     [clampHeight, rows],
   );
 
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const apply = () => {
-      setWidth(el.clientWidth);
-      setHeight((h) => clampHeight(h));
-    };
+    const apply = () => setWidth(el.clientWidth);
     apply();
     const ro = new ResizeObserver(apply);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [clampHeight]);
+  }, []);
 
-  useEffect(() => {
-    if (!customized.current) setHeight(defaultHeight());
-  }, [defaultHeight]);
+  const natural = clampHeight(gutterHeights.filmstripRowH * rows);
+  const height = natural / rows - ROW_PAD_Y >= MIN_BOX_H ? natural : COLLAPSED_H;
 
   const onResizeDrag = (next: number) => {
-    customized.current = true;
-    setHeight(clampHeight(next));
+    const clamped = clampHeight(next);
+    const tooShort = clamped / rows - ROW_PAD_Y < MIN_BOX_H;
+    saveGutterHeights({ filmstripRowH: tooShort ? 0 : clamped / rows });
   };
   const onResizeToggle = () => {
-    customized.current = true;
     const collapsed = pack(height).boxH < MIN_BOX_H;
-    setHeight(collapsed ? defaultHeight() : clampHeight(COLLAPSED_H));
+    saveGutterHeights({ filmstripRowH: collapsed ? defaultHeight() / rows : 0 });
   };
 
   const { boxH, boxW, count } = pack(height);

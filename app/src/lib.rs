@@ -124,6 +124,7 @@ pub fn run() {
             commands::set_hwfallback,
             projects::recent_projects_meta,
             config::set_ui_state,
+            config::set_gutter_heights,
             config::set_last_project,
             config::set_slowpics_cookie,
             commands::open_url,

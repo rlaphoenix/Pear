@@ -24,7 +24,7 @@ interface Props {
 }
 
 export function Timeline({ params, paramsKey, active }: Props) {
-  const { settings, setSegments, patch } = useProject();
+  const { settings, setSegments, patch, gutterHeights, saveGutterHeights } = useProject();
   const sources = settings.sources;
   const gutterWidth = settings.gutterWidth;
   const setGutterWidth = (w: number) => patch({ gutterWidth: w });
@@ -43,8 +43,13 @@ export function Timeline({ params, paramsKey, active }: Props) {
   useEffect(() => {
     selRef.current = sel;
   });
-  const [collapsed, setCollapsed] = useState(false);
-  const [laneH, setLaneH] = useState(LANE_H);
+  const laneH = gutterHeights.timelineLaneH;
+  const collapsed = laneH === 0;
+  const setLaneH = (v: number) => saveGutterHeights({ timelineLaneH: v });
+  const setCollapsed = (next: boolean | ((c: boolean) => boolean)) => {
+    const c = typeof next === "function" ? next(collapsed) : next;
+    saveGutterHeights({ timelineLaneH: c ? 0 : LANE_H });
+  };
   const [menu, setMenu] = useState<Menu | null>(null);
   const [renaming, setRenaming] = useState<Sel | null>(null);
 
@@ -139,12 +144,7 @@ export function Timeline({ params, paramsKey, active }: Props) {
 
   const onVDrag = (next: number) => {
     const laneNext = next / Math.max(1, sources.length);
-    if (laneNext < LANE_MIN) {
-      setCollapsed(true);
-    } else {
-      setCollapsed(false);
-      setLaneH(clampNum(laneNext, LANE_MIN, LANE_H));
-    }
+    setLaneH(laneNext < LANE_MIN ? 0 : clampNum(laneNext, LANE_MIN, LANE_H));
   };
 
   const labels = sources.map((s) => trackLabel(s) || "No source");
@@ -168,7 +168,7 @@ export function Timeline({ params, paramsKey, active }: Props) {
   return (
     <div className="relative flex shrink-0 flex-col border-t border-border bg-panel">
       <ResizeHandle
-        value={collapsed ? 0 : laneH * Math.max(1, sources.length)}
+        value={laneH * Math.max(1, sources.length)}
         onDrag={onVDrag}
         onToggle={() => setCollapsed((c) => !c)}
       />

@@ -164,6 +164,10 @@ pub struct Prefs {
     pub slowpics_cookie: String,
     #[serde(default)]
     pub slowpics_browser_id: String,
+    #[serde(default)]
+    pub timeline_lane_h: Option<f64>,
+    #[serde(default)]
+    pub filmstrip_row_h: Option<f64>,
 }
 
 impl Default for Prefs {
@@ -200,6 +204,8 @@ impl Default for Prefs {
             comp_pics_api_key: String::new(),
             slowpics_cookie: String::new(),
             slowpics_browser_id: String::new(),
+            timeline_lane_h: None,
+            filmstrip_row_h: None,
         }
     }
 }
@@ -327,6 +333,18 @@ pub fn set_ui_state(
         prefs.last_tab = last_tab;
         prefs.preview_mode = preview_mode;
         prefs.seek_base = seek_base;
+    })
+}
+
+#[tauri::command]
+pub fn set_gutter_heights(
+    app: AppHandle,
+    timeline_lane_h: f64,
+    filmstrip_row_h: f64,
+) -> Result<(), String> {
+    update(&app, |prefs| {
+        prefs.timeline_lane_h = Some(timeline_lane_h);
+        prefs.filmstrip_row_h = Some(filmstrip_row_h);
     })
 }
 

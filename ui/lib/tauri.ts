@@ -523,6 +523,8 @@ export interface Prefs {
   expirationType: ExpirationType;
   compPicsApiKey: string;
   slowpicsCookie: string;
+  timelineLaneH: number | null;
+  filmstripRowH: number | null;
 }
 
 export interface AppSettings {
@@ -726,6 +728,14 @@ export const recentProjectsMeta = () =>
 
 export const setUiState = (lastTab: string, previewMode: string, seekBase: number) =>
   invoke<void>("set_ui_state", { lastTab, previewMode, seekBase });
+
+let gutterTimer: ReturnType<typeof setTimeout> | undefined;
+export const setGutterHeights = (timelineLaneH: number, filmstripRowH: number) => {
+  clearTimeout(gutterTimer);
+  gutterTimer = setTimeout(() => {
+    void invoke<void>("set_gutter_heights", { timelineLaneH, filmstripRowH });
+  }, 400);
+};
 
 export const setLastProject = (path: string) =>
   invoke<void>("set_last_project", { path });
