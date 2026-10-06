@@ -964,12 +964,9 @@ fn frame_meta(frame: &FrameRef) -> FrameMeta {
     FrameMeta { pict, fmt, fps }
 }
 
-fn vs_kernel(name: &str) -> &'static str {
+fn vs_kernel(name: &str) -> &str {
     match name {
-        "Nearest" => "Point",
-        "Bilinear" | "Triangle" => "Bilinear",
-        "Bicubic" | "CatmullRom" => "Bicubic",
-        "Lanczos" | "Lanczos3" => "Lanczos",
+        "Point" | "Bilinear" | "Bicubic" | "Lanczos" | "Spline16" | "Spline64" => name,
         _ => "Spline36",
     }
 }

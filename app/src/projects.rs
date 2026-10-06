@@ -188,10 +188,10 @@ fn default_gutter_width() -> f64 {
     120.0
 }
 fn default_up_algo() -> String {
-    "Triangle".into()
+    "Bilinear".into()
 }
 fn default_down_algo() -> String {
-    "Lanczos3".into()
+    "Lanczos".into()
 }
 fn default_upscale() -> ScaleOpt {
     ScaleOpt { enabled: false, algorithm: default_up_algo() }

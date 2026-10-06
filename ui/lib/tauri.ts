@@ -8,19 +8,18 @@ export type ProjectFrame = number;
 export type ComparisonIndex = number;
 export type UnixSeconds = number;
 
-// Resampling filters, named exactly as the `image` crate's `FilterType` variants.
-export type Algo = "Nearest" | "Triangle" | "CatmullRom" | "Gaussian" | "Lanczos3";
+// VapourSynth core.resize kernels (the scaler that actually resizes sources).
+export const ALGOS = ["Point", "Bilinear", "Bicubic", "Lanczos", "Spline16", "Spline36", "Spline64"] as const;
+export type Algo = (typeof ALGOS)[number];
+
+// A missing, unknown or old algorithm name (e.g. from an older project) falls back to the default.
+export function normalizeAlgo(name: string | undefined, fallback: Algo): Algo {
+  return (ALGOS as readonly string[]).includes(name ?? "") ? (name as Algo) : fallback;
+}
 
 // Pad/crop alignment: off, or on with the shared canvas taking the largest or smallest source's
 // aspect ratio.
 export type SpatialAspect = "off" | "largest" | "smallest";
-export const ALGOS: Algo[] = [
-  "Nearest",
-  "Triangle",
-  "CatmullRom",
-  "Gaussian",
-  "Lanczos3",
-];
 
 export type FrameMatch = "Any" | "I" | "P" | "B";
 export const FRAME_MATCHES: FrameMatch[] = ["Any", "I", "P", "B"];
