@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { CanvasMode } from "@/lib/preview";
+import type { CanvasMode, FillMode, ImagePosition } from "@/lib/preview";
 
 export type DataUrl = string;
 export type SourcePath = string;
@@ -416,6 +416,8 @@ export interface Config {
   upscale: ScaleOpt;
   downscale: ScaleOpt;
   scaleMode: ScaleMode;
+  fillMode: FillMode;
+  imagePosition: ImagePosition;
   comparisons: number[];
   gutterWidth: number;
   /** Key insertion order defines source order. */

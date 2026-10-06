@@ -8,6 +8,8 @@ import {
   previewBorderStyle,
   zoomCss,
   canvasModeOptions,
+  fillModeOptions,
+  imagePositionOptions,
   scaleOptions,
   scaleModeOptions,
   type PreviewMode,
@@ -71,10 +73,13 @@ export function PreviewStage({
   const { zoomAlgo, previewBg, previewBorder } = appSettings;
   const { settings, patch } = useProject();
   const { juxLeft, juxRight, setJuxLeft, setJuxRight, fullscreen, setFullscreen } = usePreview();
-  // Visual-only: canvas mode is the app-level defaultZoom preference.
+  // Visual-only: how the composited frame fills/aligns within its box (never touches pixels).
+  // Fill and position persist with the project; canvas mode is the app-level defaultZoom preference.
+  const { fillMode, imagePosition } = settings;
   const canvasMode = appSettings.defaultZoom;
   const setCanvasMode = (v: typeof canvasMode) =>
     void saveAppSettings({ ...appSettings, defaultZoom: v });
+  const fitStyle = { objectFit: fillMode, objectPosition: imagePosition } as const;
   // Spatial scaling (project settings): one of the two enable flags at a time, plus the mode.
   const scaleChoice: ScaleChoice = settings.upscaleSmallest
     ? "upscale"
@@ -134,7 +139,7 @@ export function PreviewStage({
             key="jux-left"
             frame={sources[juxLeft]}
             className={imgClass}
-            style={{ imageRendering: rendering, clipPath: `inset(0 ${((1 - jx) * 100).toFixed(4)}% 0 0)` }}
+            style={{ ...fitStyle, imageRendering: rendering, clipPath: `inset(0 ${((1 - jx) * 100).toFixed(4)}% 0 0)` }}
           />
         )}
         {sources[juxRight] && (
@@ -142,7 +147,7 @@ export function PreviewStage({
             key="jux-right"
             frame={sources[juxRight]}
             className={imgClass}
-            style={{ imageRendering: rendering, clipPath: `inset(0 0 0 ${(jx * 100).toFixed(4)}%)` }}
+            style={{ ...fitStyle, imageRendering: rendering, clipPath: `inset(0 0 0 ${(jx * 100).toFixed(4)}%)` }}
           />
         )}
       </>
@@ -152,7 +157,7 @@ export function PreviewStage({
           key={s.meta.path}
           frame={s}
           className={imgClass}
-          style={{ imageRendering: rendering, opacity: i === activeSource ? 1 : 0 }}
+          style={{ ...fitStyle, imageRendering: rendering, opacity: i === activeSource ? 1 : 0 }}
           onPainted={onLayerPainted ? (src) => onLayerPainted(i, src) : undefined}
         />
       ))
@@ -210,7 +215,7 @@ export function PreviewStage({
               <FrameCanvas
                 frame={s}
                 className={imgClass}
-                style={{ imageRendering: rendering }}
+                style={{ ...fitStyle, imageRendering: rendering }}
               />
             </div>
             <SourceBadge
@@ -257,7 +262,7 @@ export function PreviewStage({
             <GripVertical className="size-[18px]" />
           </div>
           <div
-            className="absolute bottom-2 left-2 z-20 w-[42%] max-w-56"
+            className={cn("absolute left-2 z-20 w-[42%] max-w-56", showViewOptions ? "bottom-11" : "bottom-2")}
             onPointerDown={(e) => e.stopPropagation()}
             onPointerUp={(e) => e.stopPropagation()}
           >
@@ -269,7 +274,7 @@ export function PreviewStage({
             />
           </div>
           <div
-            className="absolute bottom-2 right-2 z-20 w-[42%] max-w-56"
+            className={cn("absolute right-2 z-20 w-[42%] max-w-56", showViewOptions ? "bottom-11" : "bottom-2")}
             onPointerDown={(e) => e.stopPropagation()}
             onPointerUp={(e) => e.stopPropagation()}
           >
@@ -373,6 +378,27 @@ export function PreviewStage({
           >
             {copied ? <Check className="size-4 text-primary" /> : <Copy className="size-4" />}
           </button>
+        </div>
+      )}
+
+      {comparison && showViewOptions && (
+        <div
+          className="absolute bottom-2 left-2 z-20 flex items-center gap-1.5"
+          onPointerDown={(e) => e.stopPropagation()}
+          onPointerUp={(e) => e.stopPropagation()}
+        >
+          <Select
+            value={fillMode}
+            options={fillModeOptions}
+            onValueChange={(v) => patch({ fillMode: v })}
+            className="h-7 w-[96px] bg-black/70 text-[11px]"
+          />
+          <Select
+            value={imagePosition}
+            options={imagePositionOptions}
+            onValueChange={(v) => patch({ imagePosition: v })}
+            className="h-7 w-[104px] bg-black/70 text-[11px]"
+          />
         </div>
       )}
 

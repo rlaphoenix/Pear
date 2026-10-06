@@ -6,6 +6,8 @@ export type PreviewMode = "single" | "split" | "juxtapose" | "weave";
 // Visual-only display controls, modelled on slow.pics. They change how the composited frame is
 // shown in the preview - never the actual image data.
 // - CanvasMode sets the base fit the viewport resets to (wheel-zoom/pan still layer on top).
+// - FillMode maps to CSS object-fit, ImagePosition to CSS object-position (its values are valid
+//   object-position keywords as-is).
 export const canvasModeOptions = [
   { value: "fit", label: "Fit" },
   { value: "none", label: "Native size" },
@@ -13,6 +15,27 @@ export const canvasModeOptions = [
   { value: "fit-height", label: "Fill height" },
 ] as const;
 export type CanvasMode = (typeof canvasModeOptions)[number]["value"];
+
+export const fillModeOptions = [
+  { value: "none", label: "As is" },
+  { value: "contain", label: "Contain" },
+  { value: "cover", label: "Cover" },
+  { value: "fill", label: "Stretch" },
+] as const;
+export type FillMode = (typeof fillModeOptions)[number]["value"];
+
+export const imagePositionOptions = [
+  { value: "center", label: "Center" },
+  { value: "top left", label: "Top left" },
+  { value: "top", label: "Top" },
+  { value: "top right", label: "Top right" },
+  { value: "left", label: "Left" },
+  { value: "right", label: "Right" },
+  { value: "bottom left", label: "Bottom left" },
+  { value: "bottom", label: "Bottom" },
+  { value: "bottom right", label: "Bottom right" },
+] as const;
+export type ImagePosition = (typeof imagePositionOptions)[number]["value"];
 
 // Spatial scaling: which source (if any) every source is scaled toward, and how the resolution is
 // chosen. Backed by the upscaleSmallest/downscaleLargest booleans + scaleMode project settings.

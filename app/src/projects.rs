@@ -187,6 +187,12 @@ pub fn identity(path: &str) -> Result<FileId, String> {
 fn default_gutter_width() -> f64 {
     120.0
 }
+fn default_fill_mode() -> String {
+    "none".into()
+}
+fn default_image_position() -> String {
+    "center".into()
+}
 fn default_up_algo() -> String {
     "Bilinear".into()
 }
@@ -225,6 +231,11 @@ pub struct Config {
     pub downscale: ScaleOpt,
     #[serde(default)]
     pub scale_mode: crate::pipeline::ScaleMode,
+    // Preview display options (visual only, viewer-side): CSS object-fit and object-position.
+    #[serde(default = "default_fill_mode")]
+    pub fill_mode: String,
+    #[serde(default = "default_image_position")]
+    pub image_position: String,
     #[serde(default = "default_gutter_width")]
     pub gutter_width: f64,
     #[serde(default)]
@@ -248,6 +259,8 @@ impl Default for Config {
             upscale: default_upscale(),
             downscale: default_downscale(),
             scale_mode: crate::pipeline::ScaleMode::default(),
+            fill_mode: default_fill_mode(),
+            image_position: default_image_position(),
             gutter_width: default_gutter_width(),
             sources: IndexMap::new(),
             name: String::new(),

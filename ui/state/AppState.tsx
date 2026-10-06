@@ -68,6 +68,7 @@ import {
 } from "@/lib/tauri";
 import { LANE_H } from "@/lib/timeline";
 import { FILMSTRIP_ROW_H } from "@/components/tabs/preview/Filmstrip";
+import type { FillMode, ImagePosition } from "@/lib/preview";
 import { MEDIA_EXTS } from "@/lib/utils";
 import { defaultSegments } from "@/lib/frames";
 import { toast } from "@/lib/toast";
@@ -109,6 +110,8 @@ export interface Settings {
   downscaleLargest: boolean;
   downscaleAlgo: Algo;
   scaleMode: ScaleMode;
+  fillMode: FillMode;
+  imagePosition: ImagePosition;
   gutterWidth: number;
   sources: UiSource[];
 }
@@ -158,6 +161,8 @@ function useSettings() {
     downscaleLargest: false,
     downscaleAlgo: "Lanczos",
     scaleMode: "both",
+    fillMode: "none",
+    imagePosition: "center",
     gutterWidth: 120,
     sources: [],
   }));
@@ -514,6 +519,8 @@ function useSettings() {
         downscaleLargest: cfg.downscale?.enabled ?? false,
         downscaleAlgo: normalizeAlgo(cfg.downscale?.algorithm, "Lanczos"),
         scaleMode: cfg.scaleMode ?? "both",
+        fillMode: cfg.fillMode ?? "none",
+        imagePosition: cfg.imagePosition ?? "center",
         gutterWidth: cfg.gutterWidth ?? 120,
         sources: sourceKeys.map((k) => applySaved(k, savedSources.current)),
       };
@@ -1003,6 +1010,8 @@ function toConfig(s: Settings, scripts: Record<SourceId, string>): Config {
     upscale: { enabled: s.upscaleSmallest, algorithm: s.upscaleAlgo },
     downscale: { enabled: s.downscaleLargest, algorithm: s.downscaleAlgo },
     scaleMode: s.scaleMode,
+    fillMode: s.fillMode,
+    imagePosition: s.imagePosition,
     gutterWidth: s.gutterWidth,
     sources,
     name: "",
