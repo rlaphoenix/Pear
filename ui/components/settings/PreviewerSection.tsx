@@ -39,6 +39,24 @@ export function PreviewerSection({ draft, setDraft }: SectionProps) {
 
       <div className="flex flex-col gap-2">
         <div className="flex flex-col gap-0.5">
+          <span className="text-sm text-foreground/90">Black/solid scan sensitivity</span>
+          <span className="text-xs text-muted-foreground">
+            How close to a single flat colour a frame must be for the "scan for next
+            black/solid frame" button to stop on it. 0 requires a perfectly uniform frame;
+            higher values tolerate more variation (compression noise, faint gradients).
+          </span>
+        </div>
+        <RangeField
+          value={draft.solidTol}
+          min={0}
+          max={64}
+          step={1}
+          onChange={(v) => setDraft((d) => ({ ...d, solidTol: v }))}
+        />
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-0.5">
           <span className="text-sm text-foreground/90">Background</span>
           <span className="text-xs text-muted-foreground">
             The backdrop drawn behind the preview image.

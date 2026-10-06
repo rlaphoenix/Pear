@@ -107,6 +107,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::init_source,
             commands::source_keyframes,
+            commands::next_solid_frame,
             commands::render,
             commands::frame_bytes,
             commands::release_frames,

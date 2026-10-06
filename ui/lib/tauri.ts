@@ -508,6 +508,7 @@ export interface Prefs {
   infoBoxPosition: string;
   infoBoxScale: number;
   weaveFrames: number;
+  solidTol: number;
   watermark: boolean;
   previewBg: PreviewBg | null;
   previewBorder: PreviewBorder | null;
@@ -542,6 +543,7 @@ export interface AppSettings {
   infoBoxPosition: string;
   infoBoxScale: number;
   weaveFrames: number;
+  solidTol: number;
   watermark: boolean;
   previewBg: PreviewBg;
   previewBorder: PreviewBorder;
@@ -629,6 +631,15 @@ export const sourceKeyframes = (
   deintDouble = false,
 ) => invoke<number[]>("source_keyframes", { path, deinterlace, deintKernel, deintDouble });
 
+export interface SolidScan {
+  /** [project frame, source index] */
+  found: [number, number] | null;
+  next: number | null;
+}
+
+export const nextSolidFrame = (params: GenParams, start: number, tol: number) =>
+  invoke<SolidScan>("next_solid_frame", { params, start, tol });
+
 export const saveAll = (
   params: GenParams,
   outDir: string | null,
@@ -704,6 +715,7 @@ export const saveSettings = (s: AppSettings) =>
     infoBoxPosition: s.infoBoxPosition,
     infoBoxScale: s.infoBoxScale,
     weaveFrames: s.weaveFrames,
+    solidTol: s.solidTol,
     watermark: s.watermark,
     previewBg: s.previewBg,
     previewBorder: s.previewBorder,

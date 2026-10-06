@@ -4,6 +4,8 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  Contrast,
+  Square,
   Pause,
   Play,
   SkipBack,
@@ -86,6 +88,8 @@ interface Props {
   canSegment?: boolean;
   playing?: boolean;
   onTogglePlay?: () => void;
+  onScanSolid?: () => void;
+  scanning?: boolean;
 }
 
 export function Controls({
@@ -99,6 +103,8 @@ export function Controls({
   canSegment,
   playing = false,
   onTogglePlay,
+  onScanSolid,
+  scanning = false,
 }: Props) {
   const clockFps = tracks[0]?.fps ?? 25;
   const [hover, setHover] = useState<{ x: number; n: number } | null>(null);
@@ -218,6 +224,12 @@ export function Controls({
           "Next keyframe",
           () => onJumpKeyframe?.(1),
           !canKeyframe,
+        )}
+        {navBtn(
+          scanning ? <Square className="size-3.5 fill-current" /> : <Contrast className="size-3.5" />,
+          scanning ? "Stop scan" : "Scan all sources for next black/solid frame",
+          () => onScanSolid?.(),
+          !enabled,
         )}
       </div>
     </div>

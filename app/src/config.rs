@@ -49,6 +49,9 @@ fn default_info_scale() -> f64 {
 fn default_weave_frames() -> u32 {
     1
 }
+fn default_solid_tol() -> u8 {
+    10
+}
 
 fn default_expiration_days() -> u32 {
     90
@@ -132,6 +135,8 @@ pub struct Prefs {
     pub info_box_scale: f64,
     #[serde(default = "default_weave_frames")]
     pub weave_frames: u32,
+    #[serde(default = "default_solid_tol")]
+    pub solid_tol: u8,
     #[serde(default = "default_true")]
     pub watermark: bool,
     #[serde(default)]
@@ -188,6 +193,7 @@ impl Default for Prefs {
             info_box_position: default_info_pos(),
             info_box_scale: default_info_scale(),
             weave_frames: default_weave_frames(),
+            solid_tol: default_solid_tol(),
             watermark: true,
             preview_bg: serde_json::Value::Null,
             preview_border: serde_json::Value::Null,
@@ -279,6 +285,7 @@ pub fn save_settings(
     info_box_position: String,
     info_box_scale: f64,
     weave_frames: u32,
+    solid_tol: u8,
     watermark: bool,
     preview_bg: serde_json::Value,
     preview_border: serde_json::Value,
@@ -304,6 +311,7 @@ pub fn save_settings(
         prefs.info_box_position = info_box_position;
         prefs.info_box_scale = info_box_scale;
         prefs.weave_frames = weave_frames;
+        prefs.solid_tol = solid_tol;
         prefs.watermark = watermark;
         prefs.preview_bg = preview_bg;
         prefs.preview_border = preview_border;

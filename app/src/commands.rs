@@ -1355,6 +1355,64 @@ pub async fn source_keyframes(
     .map_err(|e| e.to_string())?
 }
 
+/// True if the sampled pixels are all within `tol` of each other per channel (black or any
+/// solid colour).
+/// ponytail: strided sample, misses a solid frame with a tiny non-uniform speck (e.g. a logo).
+fn is_solid(img: &RgbaImage, tol: u8) -> bool {
+    let (mut lo, mut hi) = ([255u8; 3], [0u8; 3]);
+    for p in img.as_raw().as_chunks::<4>().0.iter().step_by(16) {
+        for c in 0..3 {
+            lo[c] = lo[c].min(p[c]);
+            hi[c] = hi[c].max(p[c]);
+            if hi[c] - lo[c] > tol {
+                return false;
+            }
+        }
+    }
+    true
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SolidScan {
+    /// First black/solid hit in this batch as `(project frame, source index)`, if any. Earliest
+    /// frame wins; ties go to the lowest source index.
+    pub found: Option<(u64, usize)>,
+    /// First project frame not yet examined; feed back as `start` to continue. None once the
+    /// project end is reached (nothing more to scan).
+    pub next: Option<u64>,
+}
+
+/// Scan one batch of project frames from `start` (inclusive) across every source for a
+/// black/solid frame. The frontend loops on `next` so the user can stop mid-scan.
+#[tauri::command]
+pub async fn next_solid_frame(
+    state: State<'_, AppState>,
+    params: GenParams,
+    start: u64,
+    tol: u8,
+) -> Result<SolidScan, String> {
+    const BATCH: u64 = 12;
+    let st = state.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let (infos, _d, _c, _f, fits) = plan(&st, &params)?;
+        let end = params.sources.iter().map(|s| s.proj_len()).max().unwrap_or(0);
+        let stop = (start + BATCH).min(end);
+        let hits: Vec<(u64, usize, u64)> = (start..stop)
+            .flat_map(|t| params.sources.iter().enumerate().filter_map(move |(i, s)| Some((t, i, s.frame_at(t)?))))
+            .collect();
+        let (srcs, frames): (Vec<usize>, Vec<u64>) = hits.iter().map(|&(_, i, f)| (i, f)).unzip();
+        let imgs = request_frames(&params, &infos, &fits, &srcs, &frames, None)?;
+        let found = imgs
+            .iter()
+            .zip(&hits)
+            .find_map(|((img, _), &(t, i, _))| is_solid(img, tol).then_some((t, i)));
+        Ok(SolidScan { found, next: (stop < end).then_some(stop) })
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ProbedSource {
@@ -1786,4 +1844,23 @@ pub fn is_portable() -> bool {
         .and_then(|exe| exe.parent().map(|dir| dir.join("uninstall.exe")))
         .map(|uninstaller| !uninstaller.exists())
         .unwrap_or(true)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::is_solid;
+    use image::{Rgba, RgbaImage};
+
+    #[test]
+    fn detects_solid_and_rejects_varied() {
+        let black = RgbaImage::from_pixel(64, 64, Rgba([0, 0, 0, 255]));
+        assert!(is_solid(&black, 8));
+        let solid = RgbaImage::from_pixel(64, 64, Rgba([30, 90, 200, 255]));
+        assert!(is_solid(&solid, 8));
+
+        let mut varied = RgbaImage::from_pixel(64, 64, Rgba([0, 0, 0, 255]));
+        // put a bright pixel where the stride will land it (index 16 -> x=16)
+        varied.put_pixel(16, 0, Rgba([255, 255, 255, 255]));
+        assert!(!is_solid(&varied, 8));
+    }
 }

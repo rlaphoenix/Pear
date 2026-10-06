@@ -1,6 +1,7 @@
-import { forwardRef, type ReactNode } from "react";
+import { forwardRef, useRef, useState, type ReactNode } from "react";
 import { ImageOff } from "lucide-react";
 import { cn, splitSourceError, frameToBlob } from "@/lib/utils";
+import { nextSolidFrame } from "@/lib/tauri";
 import { ErrorBox } from "@/components/primitives/error-box";
 import { useZoom } from "@/hooks/useZoom";
 import { PreviewStage } from "@/components/PreviewStage";
@@ -58,6 +59,34 @@ export const PreviewTab = forwardRef<PreviewTabHandle, Props>(function PreviewTa
     fullscreen,
     bands,
   );
+
+  const [scanning, setScanning] = useState(false);
+  const stopScan = useRef(false);
+  const scanSolid = async () => {
+    if (scanning) {
+      stopScan.current = true; // second click stops the running scan
+      return;
+    }
+    if (!ready) return;
+    setScanning(true);
+    try {
+      let start = base + 1;
+      while (!stopScan.current) {
+        const res = await nextSolidFrame(params, start, appSettings.solidTol);
+        if (res.found != null) {
+          setBase(res.found[0]);
+          onSelectSource(res.found[1]);
+          return;
+        }
+        if (res.next == null) return; // reached the project end
+        start = res.next;
+      }
+      setBase(start - 1); // stopped: land on last checked
+    } finally {
+      setScanning(false);
+      stopScan.current = false;
+    }
+  };
 
   const { jumpKeyframe, jumpSegment } = usePreviewKeyboard({
     keyframes,
@@ -128,6 +157,8 @@ export const PreviewTab = forwardRef<PreviewTabHandle, Props>(function PreviewTa
           canSegment={(shownSource?.segments?.length ?? 0) > 0}
           playing={playing}
           onTogglePlay={togglePlay}
+          onScanSolid={scanSolid}
+          scanning={scanning}
           tracks={sources.map((s, i) => ({
             id: s.id,
             index: i,

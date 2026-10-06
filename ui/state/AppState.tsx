@@ -188,6 +188,7 @@ function useSettings() {
     infoBoxPosition: "top-left",
     infoBoxScale: 100,
     weaveFrames: 1,
+    solidTol: 10,
     watermark: true,
     previewBg: DEFAULT_PREVIEW_BG,
     previewBorder: DEFAULT_PREVIEW_BORDER,
@@ -275,6 +276,7 @@ function useSettings() {
           infoBoxPosition: prefs.infoBoxPosition ?? "top-left",
           infoBoxScale: prefs.infoBoxScale ?? 100,
           weaveFrames: Math.max(1, Math.floor(prefs.weaveFrames ?? 1)),
+          solidTol: prefs.solidTol ?? 10,
           watermark: prefs.watermark ?? true,
           previewBg: { ...DEFAULT_PREVIEW_BG, ...(prefs.previewBg ?? {}) },
           previewBorder: (() => {
