@@ -61,6 +61,14 @@ export function PreviewStage({
   const { juxLeft, juxRight, setJuxLeft, setJuxRight, fullscreen, setFullscreen } = usePreview();
   const canInteract = comparison != null && interactive;
   const sources = comparison?.sources ?? [];
+  const info = (sources[activeSource] ?? sources[0])?.meta;
+  const frameInfo = info
+    ? [
+        info.fps > 0 ? `${Number(info.fps.toFixed(3))} fps` : null,
+        `${info.renderW}×${info.renderH}`,
+        info.fmt || null,
+      ].filter((p): p is string => p != null)
+    : [];
 
   const boxRef = useRef<HTMLDivElement | null>(null);
   const [jx, setJx] = useState(0.5);
@@ -251,29 +259,6 @@ export function PreviewStage({
         </>
       )}
 
-      {comparison &&
-        (() => {
-          const a = sources[activeSource] ?? sources[0];
-          if (!a) return null;
-          const parts = [
-            a.meta.fps > 0 ? `${Number(a.meta.fps.toFixed(3))} fps` : null,
-            `${a.meta.renderW}×${a.meta.renderH}`,
-            a.meta.fmt || null,
-          ].filter((p): p is string => p != null);
-          return (
-            <div className="pointer-events-none absolute left-2 top-2 z-20 flex items-center gap-2">
-              {parts.map((p, i) => (
-                <span
-                  key={i}
-                  className="flex h-7 items-center bg-black/60 px-2 font-mono text-[11px] tabular-nums text-white/90"
-                >
-                  {p}
-                </span>
-              ))}
-            </div>
-          );
-        })()}
-
       <div className="absolute right-2 top-2 z-20 flex items-center gap-2">
         {comparison && (
           <button
@@ -287,30 +272,6 @@ export function PreviewStage({
             {zoom.percent}%
           </button>
         )}
-        {comparison && onAddComparison && (
-          <button
-            type="button"
-            onClick={onAddClick}
-            onPointerDown={(e) => e.stopPropagation()}
-            onPointerUp={(e) => e.stopPropagation()}
-            title="Add this frame as a comparison (Export tab)"
-            className="flex size-7 cursor-pointer items-center justify-center bg-black/60 text-white/90 outline-none hover:bg-black/80"
-          >
-            {added ? <Check className="size-4 text-primary" /> : <ImagePlus className="size-4" />}
-          </button>
-        )}
-        {comparison && (
-          <button
-            type="button"
-            onClick={onCopyFrame}
-            onPointerDown={(e) => e.stopPropagation()}
-            onPointerUp={(e) => e.stopPropagation()}
-            title="Copy this frame (full resolution, with info box)"
-            className="flex size-7 cursor-pointer items-center justify-center bg-black/60 text-white/90 outline-none hover:bg-black/80"
-          >
-            {copied ? <Check className="size-4 text-primary" /> : <Copy className="size-4" />}
-          </button>
-        )}
         <button
           type="button"
           onClick={() => setFullscreen((f) => !f)}
@@ -322,6 +283,41 @@ export function PreviewStage({
           {fullscreen ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
         </button>
       </div>
+
+      {comparison && (
+        <div className="absolute bottom-2 right-2 z-20 flex items-center gap-2">
+          {frameInfo.map((p, i) => (
+            <span
+              key={i}
+              className="pointer-events-none flex h-7 items-center bg-black/60 px-2 font-mono text-[11px] tabular-nums text-white/90"
+            >
+              {p}
+            </span>
+          ))}
+          {onAddComparison && (
+            <button
+              type="button"
+              onClick={onAddClick}
+              onPointerDown={(e) => e.stopPropagation()}
+              onPointerUp={(e) => e.stopPropagation()}
+              title="Add this frame as a comparison (Export tab)"
+              className="flex size-7 cursor-pointer items-center justify-center bg-black/60 text-white/90 outline-none hover:bg-black/80"
+            >
+              {added ? <Check className="size-4 text-primary" /> : <ImagePlus className="size-4" />}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={onCopyFrame}
+            onPointerDown={(e) => e.stopPropagation()}
+            onPointerUp={(e) => e.stopPropagation()}
+            title="Copy this frame (full resolution, with info box)"
+            className="flex size-7 cursor-pointer items-center justify-center bg-black/60 text-white/90 outline-none hover:bg-black/80"
+          >
+            {copied ? <Check className="size-4 text-primary" /> : <Copy className="size-4" />}
+          </button>
+        </div>
+      )}
 
       {loading && (
         <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/40 backdrop-blur-[1px]">
