@@ -1,6 +1,6 @@
 [package]
 name = "pear"
-version = "1.0.1"
+version = "1.1.0"
 description = "Pear - the PEARfect compare tool"
 authors = ["pear"]
 edition = "2021"
