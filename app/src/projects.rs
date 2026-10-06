@@ -223,10 +223,8 @@ pub struct Config {
     pub upscale: ScaleOpt,
     #[serde(default = "default_downscale")]
     pub downscale: ScaleOpt,
-    #[serde(default, deserialize_with = "crate::pipeline::de_crop")]
-    pub crop_to_smallest: crate::pipeline::SpatialAspect,
-    #[serde(default, deserialize_with = "crate::pipeline::de_pad")]
-    pub pad_to_largest: crate::pipeline::SpatialAspect,
+    #[serde(default)]
+    pub scale_mode: crate::pipeline::ScaleMode,
     #[serde(default = "default_gutter_width")]
     pub gutter_width: f64,
     #[serde(default)]
@@ -249,8 +247,7 @@ impl Default for Config {
             comparisons: Vec::new(),
             upscale: default_upscale(),
             downscale: default_downscale(),
-            crop_to_smallest: crate::pipeline::SpatialAspect::Off,
-            pad_to_largest: crate::pipeline::SpatialAspect::Off,
+            scale_mode: crate::pipeline::ScaleMode::default(),
             gutter_width: default_gutter_width(),
             sources: IndexMap::new(),
             name: String::new(),

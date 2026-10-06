@@ -17,9 +17,8 @@ export function normalizeAlgo(name: string | undefined, fallback: Algo): Algo {
   return (ALGOS as readonly string[]).includes(name ?? "") ? (name as Algo) : fallback;
 }
 
-// Pad/crop alignment: off, or on with the shared canvas taking the largest or smallest source's
-// aspect ratio.
-export type SpatialAspect = "off" | "largest" | "smallest";
+// How the up/down-scale resolution is chosen: match the reference's height, its width, or fit both.
+export type ScaleMode = "height" | "width" | "both";
 
 export type FrameMatch = "Any" | "I" | "P" | "B";
 export const FRAME_MATCHES: FrameMatch[] = ["Any", "I", "P", "B"];
@@ -298,8 +297,7 @@ export interface GenParams {
   upscaleAlgo: Algo;
   downscaleLargest: boolean;
   downscaleAlgo: Algo;
-  cropToSmallest: SpatialAspect;
-  padToLargest: SpatialAspect;
+  scaleMode: ScaleMode;
   marginStart: number;
   marginEnd: number;
   match: FrameMatch;
@@ -416,8 +414,7 @@ export interface ScriptTemplate {
 export interface Config {
   upscale: ScaleOpt;
   downscale: ScaleOpt;
-  cropToSmallest: SpatialAspect;
-  padToLargest: SpatialAspect;
+  scaleMode: ScaleMode;
   comparisons: number[];
   gutterWidth: number;
   /** Key insertion order defines source order. */

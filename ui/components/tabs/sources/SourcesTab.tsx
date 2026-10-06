@@ -1,7 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import {
   Crop as CropIcon,
-  Maximize2,
   Palette,
   Plus,
   Ratio,
@@ -10,11 +9,9 @@ import {
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Modal } from "@/components/primitives/modal";
 import { NumberInput } from "@/components/primitives/number-input";
 import { Select } from "@/components/primitives/select";
 import { SubLabel } from "@/components/tabs/sources/SubLabel";
-import { CheckboxField } from "@/components/primitives/checkbox";
 import { SortableList, SortableRow } from "@/components/primitives/sortable";
 import {
   ALGOS,
@@ -26,7 +23,6 @@ import {
   FPS_PRESETS,
   deintKernelLabel,
   type Algo,
-  type SpatialAspect,
   type Crop,
   type DeintKernel,
   type Matrix,
@@ -47,12 +43,6 @@ import { SourceEditor } from "@/components/tabs/sources/SourceEditor";
 
 const algoOptions = ALGOS.map((a) => ({ value: a, label: a }));
 
-const alignOptions: { value: SpatialAspect; label: string }[] = [
-  { value: "off", label: "Off" },
-  { value: "largest", label: "Match largest source's aspect ratio" },
-  { value: "smallest", label: "Match smallest source's aspect ratio" },
-];
-
 const nameOf = (s: UiSource) => s.name || s.path?.split(/[\\/]/).pop() || "No source";
 
 interface Props {
@@ -65,7 +55,6 @@ interface Props {
 export function SourcesTab({ scriptFor, setScript, page, setPage }: Props) {
   const { settings, pickSources, removeSource, reorderSources } = useProject();
   const sources = settings.sources;
-  const [spatialOpen, setSpatialOpen] = useState(false);
   const sourceIds = sources.map((s) => s.id);
   const deintKernelOptions = DEINT_KERNELS.map((a) => ({
     value: a,
@@ -140,15 +129,6 @@ export function SourcesTab({ scriptFor, setScript, page, setPage }: Props) {
             Add Source
           </button>
         </div>
-
-        <button
-          type="button"
-          onClick={() => setSpatialOpen(true)}
-          className="flex shrink-0 items-center gap-1.5 px-3 py-1.5 text-xs text-muted-foreground outline-none transition-colors hover:text-foreground"
-        >
-          <Maximize2 className="size-3.5" />
-          Spatial Alignment
-        </button>
       </div>
 
       {selected ? (
@@ -168,12 +148,6 @@ export function SourcesTab({ scriptFor, setScript, page, setPage }: Props) {
         <div className="flex min-h-0 flex-1 items-center justify-center text-xs text-muted-foreground/50">
           No sources. Add one from the tab bar.
         </div>
-      )}
-
-      {spatialOpen && (
-        <Modal title="Spatial Alignment" onClose={() => setSpatialOpen(false)} className="max-w-2xl">
-          <ResolutionPage />
-        </Modal>
       )}
     </div>
   );
@@ -316,83 +290,6 @@ function SourcePage({
           options={RANGES}
           onValueChange={(v) => v && setRange(v)}
           className="h-8 text-xs"
-        />
-      </div>
-    </div>
-  );
-}
-
-function ResolutionPage() {
-  const { settings, patch } = useProject();
-  return (
-    <div className="flex flex-col gap-4">
-      <p className="text-sm leading-relaxed text-muted-foreground">
-        When sources differ in resolution they're placed on one shared canvas before
-        the info box and watermark are drawn. These options choose how that's done and
-        apply to both the preview and the export - you may or may not need them,
-        depending on your sources. With all off, each source is centered on the
-        bounding box of the largest dimensions.
-      </p>
-      <div className="flex flex-col gap-2">
-        <CheckboxField
-          checked={settings.upscaleSmallest}
-          onCheckedChange={(v) =>
-            patch(v ? { upscaleSmallest: true, downscaleLargest: false } : { upscaleSmallest: false })
-          }
-          label="Upscale smallest source"
-        />
-        <div className="pl-[30px]">
-          <Select<Algo>
-            value={settings.upscaleAlgo}
-            onValueChange={(v) => patch({ upscaleAlgo: v })}
-            options={algoOptions}
-            disabled={!settings.upscaleSmallest}
-          />
-        </div>
-      </div>
-      <div className="flex flex-col gap-2">
-        <CheckboxField
-          checked={settings.downscaleLargest}
-          onCheckedChange={(v) =>
-            patch(v ? { downscaleLargest: true, upscaleSmallest: false } : { downscaleLargest: false })
-          }
-          label="Downscale largest source"
-        />
-        <div className="pl-[30px]">
-          <Select<Algo>
-            value={settings.downscaleAlgo}
-            onValueChange={(v) => patch({ downscaleAlgo: v })}
-            options={algoOptions}
-            disabled={!settings.downscaleLargest}
-          />
-        </div>
-      </div>
-      <div className="flex flex-col gap-1.5">
-        <span className="text-sm text-foreground/90">Pad the sources</span>
-        <span className="max-w-xl text-xs text-muted-foreground">
-          Fit each source onto a shared canvas and fill the gaps with black - no detail is lost. The
-          canvas takes the chosen source's aspect ratio, so a differing source is either pillarboxed
-          (match largest) or letterboxed (match smallest). Combine with upscale/downscale to set the
-          output resolution.
-        </span>
-        <Select<SpatialAspect>
-          value={settings.padToLargest}
-          onValueChange={(v) => patch(v === "off" ? { padToLargest: v } : { padToLargest: v, cropToSmallest: "off" })}
-          options={alignOptions}
-        />
-      </div>
-      <div className="flex flex-col gap-1.5">
-        <span className="text-sm text-foreground/90">Crop the sources</span>
-        <span className="max-w-xl text-xs text-muted-foreground">
-          Fill a shared canvas edge-to-edge with no bars, trimming edge detail off sources that don't
-          match. The canvas takes the chosen source's aspect ratio. With upscale/downscale on, sources
-          are scaled to cover the canvas before cropping; with neither, it's a straight centre
-          pixel-crop.
-        </span>
-        <Select<SpatialAspect>
-          value={settings.cropToSmallest}
-          onValueChange={(v) => patch(v === "off" ? { cropToSmallest: v } : { cropToSmallest: v, padToLargest: "off" })}
-          options={alignOptions}
         />
       </div>
     </div>

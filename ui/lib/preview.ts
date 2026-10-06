@@ -3,6 +3,21 @@ import type { PreviewBg, PreviewBorder, ZoomAlgo } from "@/lib/tauri";
 
 export type PreviewMode = "single" | "split" | "juxtapose" | "weave";
 
+// Spatial scaling: which source (if any) every source is scaled toward, and how the resolution is
+// chosen. Backed by the upscaleSmallest/downscaleLargest booleans + scaleMode project settings.
+export const scaleOptions = [
+  { value: "none", label: "No scaling" },
+  { value: "upscale", label: "Upscale smallest" },
+  { value: "downscale", label: "Downscale largest" },
+] as const;
+export type ScaleChoice = (typeof scaleOptions)[number]["value"];
+
+export const scaleModeOptions = [
+  { value: "both", label: "Fit both dimensions" },
+  { value: "height", label: "Match by height" },
+  { value: "width", label: "Match by width" },
+] as const;
+
 export function zoomCss(algo: ZoomAlgo): CSSProperties["imageRendering"] {
   switch (algo) {
     case "pixelated":

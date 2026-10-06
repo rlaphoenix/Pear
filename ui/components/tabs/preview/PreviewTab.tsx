@@ -111,6 +111,7 @@ export const PreviewTab = forwardRef<PreviewTabHandle, Props>(function PreviewTa
           loading={loading && !playing}
           onCycle={onCycle}
           onAddComparison={onAddComparison}
+          showViewOptions
         >
           {!ready ? (
             <Empty

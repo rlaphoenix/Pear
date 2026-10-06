@@ -282,14 +282,8 @@ pub enum Tempo {
     Select { cycle: u32, offsets: Vec<u32>, num: u32, den: u32 },
 }
 
-/// How a source is resized onto the shared canvas. Scale and crop compose: scale runs first
-/// (fit-to-target preserving aspect ratio), then crop trims to the common area - so a scaled
-/// source can also be cropped, which the old one-op-per-source model couldn't express.
-#[derive(Debug, Clone, Default)]
-pub struct Fit {
-    pub scale: Option<(u32, u32, String)>,
-    pub crop: Option<(u32, u32)>,
-}
+/// How a source is resized: an optional (width, height, kernel) scale to its display target.
+pub type Fit = Option<(u32, u32, String)>;
 
 #[derive(Debug, Clone, Default)]
 pub struct Geom {
@@ -1176,13 +1170,8 @@ fn geometry_code(g: &Geom) -> String {
     if let Some((l, t, cw, ch)) = g.crop {
         s += &format!("clip = core.std.CropAbs(clip, width={cw}, height={ch}, left={l}, top={t})\n");
     }
-    if let Some((nw, nh, kernel)) = &g.fit.scale {
+    if let Some((nw, nh, kernel)) = &g.fit {
         s += &format!("clip = core.resize.{}(clip, width={nw}, height={nh})\n", vs_kernel(kernel));
-    }
-    if let Some((cw, ch)) = g.fit.crop {
-        s += &format!(
-            "clip = core.std.CropAbs(clip, width={cw}, height={ch}, left=max(0, (clip.width - {cw}) // 2), top=max(0, (clip.height - {ch}) // 2))\n"
-        );
     }
     s
 }

@@ -13,7 +13,7 @@ import { listen } from "@tauri-apps/api/event";
 import {
   Algo,
   normalizeAlgo,
-  SpatialAspect,
+  ScaleMode,
   Config,
   Crop,
   DeintKernel,
@@ -108,8 +108,7 @@ export interface Settings {
   upscaleAlgo: Algo;
   downscaleLargest: boolean;
   downscaleAlgo: Algo;
-  cropToSmallest: SpatialAspect;
-  padToLargest: SpatialAspect;
+  scaleMode: ScaleMode;
   gutterWidth: number;
   sources: UiSource[];
 }
@@ -158,8 +157,7 @@ function useSettings() {
     upscaleAlgo: "Bilinear",
     downscaleLargest: false,
     downscaleAlgo: "Lanczos",
-    cropToSmallest: "off",
-    padToLargest: "off",
+    scaleMode: "both",
     gutterWidth: 120,
     sources: [],
   }));
@@ -514,8 +512,7 @@ function useSettings() {
         upscaleAlgo: normalizeAlgo(cfg.upscale?.algorithm, "Bilinear"),
         downscaleLargest: cfg.downscale?.enabled ?? false,
         downscaleAlgo: normalizeAlgo(cfg.downscale?.algorithm, "Lanczos"),
-        cropToSmallest: cfg.cropToSmallest ?? "off",
-        padToLargest: cfg.padToLargest ?? "off",
+        scaleMode: cfg.scaleMode ?? "both",
         gutterWidth: cfg.gutterWidth ?? 120,
         sources: sourceKeys.map((k) => applySaved(k, savedSources.current)),
       };
@@ -1004,8 +1001,7 @@ function toConfig(s: Settings, scripts: Record<SourceId, string>): Config {
     comparisons: s.comparisons,
     upscale: { enabled: s.upscaleSmallest, algorithm: s.upscaleAlgo },
     downscale: { enabled: s.downscaleLargest, algorithm: s.downscaleAlgo },
-    cropToSmallest: s.cropToSmallest,
-    padToLargest: s.padToLargest,
+    scaleMode: s.scaleMode,
     gutterWidth: s.gutterWidth,
     sources,
     name: "",

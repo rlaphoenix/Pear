@@ -3,11 +3,19 @@ import { Check, Copy, GripVertical, ImagePlus, Loader2, Maximize2, Minimize2 } f
 import { cn } from "@/lib/utils";
 import { SourceBadge } from "@/components/SourceBadge";
 import { FrameCanvas } from "@/components/FrameCanvas";
-import { previewBgStyle, previewBorderStyle, zoomCss, type PreviewMode } from "@/lib/preview";
+import {
+  previewBgStyle,
+  previewBorderStyle,
+  zoomCss,
+  scaleOptions,
+  scaleModeOptions,
+  type PreviewMode,
+  type ScaleChoice,
+} from "@/lib/preview";
 import { Select } from "@/components/primitives/select";
 import type { Zoom } from "@/hooks/useZoom";
 import type { Comparison } from "@/lib/tauri";
-import { useAppSettings } from "@/state/AppState";
+import { useAppSettings, useProject } from "@/state/AppState";
 import { usePreview } from "@/state/PreviewContext";
 
 interface Props {
@@ -23,6 +31,7 @@ interface Props {
   onAddComparison?: () => void;
   overlay?: ReactNode;
   children?: ReactNode;
+  showViewOptions?: boolean;
 }
 
 async function copyImageBlob(blob: Blob): Promise<boolean> {
@@ -55,10 +64,20 @@ export function PreviewStage({
   onAddComparison,
   overlay,
   children,
+  showViewOptions = false,
 }: Props) {
   const { appSettings } = useAppSettings();
   const { zoomAlgo, previewBg, previewBorder } = appSettings;
+  const { settings, patch } = useProject();
   const { juxLeft, juxRight, setJuxLeft, setJuxRight, fullscreen, setFullscreen } = usePreview();
+  // Spatial scaling (project settings): one of the two enable flags at a time, plus the mode.
+  const scaleChoice: ScaleChoice = settings.upscaleSmallest
+    ? "upscale"
+    : settings.downscaleLargest
+      ? "downscale"
+      : "none";
+  const setScaleChoice = (v: ScaleChoice) =>
+    patch({ upscaleSmallest: v === "upscale", downscaleLargest: v === "downscale" });
   const canInteract = comparison != null && interactive;
   const sources = comparison?.sources ?? [];
   const info = (sources[activeSource] ?? sources[0])?.meta;
@@ -257,6 +276,29 @@ export function PreviewStage({
             />
           </div>
         </>
+      )}
+
+      {comparison && showViewOptions && (
+        <div
+          className="absolute left-2 top-2 z-20 flex items-center gap-1.5"
+          onPointerDown={(e) => e.stopPropagation()}
+          onPointerUp={(e) => e.stopPropagation()}
+        >
+          <Select<ScaleChoice>
+            value={scaleChoice}
+            options={scaleOptions}
+            onValueChange={setScaleChoice}
+            className="h-7 w-[128px] bg-black/70 text-[11px]"
+          />
+          {scaleChoice !== "none" && (
+            <Select
+              value={settings.scaleMode}
+              options={scaleModeOptions}
+              onValueChange={(v) => patch({ scaleMode: v })}
+              className="h-7 w-[160px] bg-black/70 text-[11px]"
+            />
+          )}
+        </div>
       )}
 
       <div className="absolute right-2 top-2 z-20 flex items-center gap-2">

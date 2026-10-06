@@ -382,10 +382,8 @@ pub struct GenParams {
     pub downscale_largest: bool,
     #[serde(default)]
     pub downscale_algo: String,
-    #[serde(default, deserialize_with = "pipeline::de_crop")]
-    pub crop_to_smallest: pipeline::SpatialAspect,
-    #[serde(default, deserialize_with = "pipeline::de_pad")]
-    pub pad_to_largest: pipeline::SpatialAspect,
+    #[serde(default)]
+    pub scale_mode: pipeline::ScaleMode,
     #[serde(default = "default_margin")]
     pub margin_start: f64,
     #[serde(default = "default_margin")]
@@ -421,8 +419,7 @@ impl GenParams {
             up_algo: self.upscale_algo.clone(),
             downscale: self.downscale_largest,
             down_algo: self.downscale_algo.clone(),
-            crop_to_smallest: self.crop_to_smallest,
-            pad_to_largest: self.pad_to_largest,
+            scale_mode: self.scale_mode,
         }
     }
 }
@@ -572,7 +569,7 @@ fn pick_positions_impl(
 
     let want_filter = !(params.match_all == "Any" || params.match_all.is_empty());
     let type_ctx: Option<(Vec<SourceInfo>, Vec<vapoursynth::Fit>)> = if want_filter {
-        plan(state, params).ok().map(|(infos, _d, _c, _f, fits)| (infos, fits))
+        plan(state, params).ok().map(|(infos, _d, _c, fits)| (infos, fits))
     } else {
         None
     };
@@ -771,6 +768,19 @@ fn crop_box(w: u32, h: u32, c: Crop) -> Option<(u32, u32, u32, u32)> {
     }
 }
 
+/// Crop box in *raw* (pre-aspect-ratio) geometry. Crop values are authored against the display
+/// frame, so the horizontal ones are scaled back from display width `dar_w` to raw width `rw`.
+fn crop_box_raw(rw: u32, dar_w: u32, h: u32, c: Crop) -> Option<(u32, u32, u32, u32)> {
+    let sx = rw as f64 / dar_w as f64;
+    let c = Crop {
+        left: (c.left as f64 * sx).round() as u32,
+        right: (c.right as f64 * sx).round() as u32,
+        top: c.top,
+        bottom: c.bottom,
+    };
+    crop_box(rw, h, c)
+}
+
 fn detected_dar(info: &SourceInfo) -> String {
     if info.sar == 0.0 || (info.sar - 1.0).abs() < 1e-3 {
         return String::new();
@@ -797,6 +807,15 @@ fn cropped_display_dims(src: &SourceParams, info: &SourceInfo) -> (u32, u32) {
     }
 }
 
+/// Raw (pre-aspect-ratio) cropped dims, used as the resolution reference for spatial scaling.
+fn cropped_raw_dims(src: &SourceParams, info: &SourceInfo) -> (u32, u32) {
+    let dar_w = dar_target_width(info.width, info.height, &src.dar).unwrap_or(info.width);
+    match crop_box_raw(info.width, dar_w, info.height, src.crop) {
+        Some((_, _, cw, ch)) => (cw, ch),
+        None => (info.width, info.height),
+    }
+}
+
 fn geom_for(src: &SourceParams, info: &SourceInfo, fit: vapoursynth::Fit) -> vapoursynth::Geom {
     let dar_width = dar_target_width(info.width, info.height, &src.dar);
     let dar_w = dar_width.unwrap_or(info.width);
@@ -819,9 +838,15 @@ fn geom_for(src: &SourceParams, info: &SourceInfo, fit: vapoursynth::Fit) -> vap
         } else {
             "limited".into()
         },
-        dar_width,
+        // With a spatial scale present, aspect ratio is folded into that single resize (its target
+        // is already the display size), so skip the standalone DAR resize and crop in raw geometry.
+        dar_width: if fit.is_some() { None } else { dar_width },
         dar_kernel: src.dar_algo.clone(),
-        crop: crop_box(dar_w, info.height, src.crop),
+        crop: if fit.is_some() {
+            crop_box_raw(info.width, dar_w, info.height, src.crop)
+        } else {
+            crop_box(dar_w, info.height, src.crop)
+        },
         fit,
     }
 }
@@ -985,20 +1010,12 @@ fn scale_label(params: &GenParams, src_dims: (u32, u32), target: (u32, u32)) -> 
     if src_dims == target {
         return None;
     }
-    let scale = if params.upscale_smallest {
-        Some("Upscaled")
+    let verb = if params.upscale_smallest {
+        "Upscaled"
     } else if params.downscale_largest {
-        Some("Downscaled")
+        "Downscaled"
     } else {
-        None
-    };
-    let verb = match (scale, params.crop_to_smallest.is_on(), params.pad_to_largest.is_on()) {
-        (Some(s), true, _) => format!("{s} & cropped"),
-        (Some(s), _, true) => format!("{s} & padded"),
-        (Some(s), _, _) => s.to_string(),
-        (None, true, _) => "Cropped".to_string(),
-        (None, _, true) => "Padded".to_string(),
-        (None, _, _) => return None,
+        return None;
     };
     Some(format!("{verb} to {}×{}", target.0, target.1))
 }
@@ -1179,7 +1196,7 @@ fn plan(
     state: &AppState,
     params: &GenParams,
 ) -> Result<
-    (Vec<SourceInfo>, Vec<(u32, u32)>, (u32, u32), image::Rgba<u8>, Vec<vapoursynth::Fit>),
+    (Vec<SourceInfo>, Vec<(u32, u32)>, (u32, u32), Vec<vapoursynth::Fit>),
     String,
 > {
     if params.sources.is_empty() {
@@ -1190,13 +1207,15 @@ fn plan(
     }
     let mut infos = Vec::with_capacity(params.sources.len());
     let mut disp_dims = Vec::with_capacity(params.sources.len());
+    let mut raw_dims = Vec::with_capacity(params.sources.len());
     for src in &params.sources {
         let info = probe_source(state, src)?;
         disp_dims.push(cropped_display_dims(src, &info));
+        raw_dims.push(cropped_raw_dims(src, &info));
         infos.push(info);
     }
-    let (canvas, fill, fits) = pipeline::plan_sizes(&disp_dims, &params.scale_opts());
-    Ok((infos, disp_dims, canvas, fill, fits))
+    let (canvas, fits) = pipeline::plan_sizes(&raw_dims, &disp_dims, &params.scale_opts());
+    Ok((infos, disp_dims, canvas, fits))
 }
 
 fn resolve_frame(
@@ -1219,41 +1238,28 @@ fn composite_frames(
     params: &GenParams,
     infos: &[SourceInfo],
     disp_dims: &[(u32, u32)],
-    canvas: (u32, u32),
-    fill: image::Rgba<u8>,
     sources: &[usize],
     frames: &[u64],
     fetched: Vec<(RgbaImage, vapoursynth::FrameMeta)>,
     info_box: bool,
     watermark: bool,
 ) -> Vec<(RgbaImage, ImgMeta)> {
-    let target = canvas;
     let types: Vec<String> = fetched.iter().map(|(_, m)| m.pict.clone()).collect();
     let render_dims: Vec<(u32, u32)> = fetched.iter().map(|(img, _)| img.dimensions()).collect();
     let vs_meta: Vec<vapoursynth::FrameMeta> = fetched.iter().map(|(_, m)| m.clone()).collect();
-    let placed: Vec<pipeline::Placed> = fetched
-        .iter()
-        .map(|(img, _)| pipeline::place_on_canvas(img, canvas, fill))
-        .collect();
 
     let info_pos = params.info_box_position.as_str();
     let info_mult = (params.info_box_scale / 100.0) as f32;
     let wm_top = info_pos == "bottom-right";
     let mark = concat!("Pear v", env!("CARGO_PKG_VERSION"));
-    let anchor_full = params.upscale_smallest
-        || params.downscale_largest
-        || params.crop_to_smallest.is_on()
-        || params.pad_to_largest.is_on();
 
     let mut out = Vec::with_capacity(sources.len());
-    for (k, place) in placed.into_iter().enumerate() {
+    for (k, (mut img, _)) in fetched.into_iter().enumerate() {
         let s = sources[k];
         let src = &params.sources[s];
         let info = &infos[s];
         let idx = frames[k];
-        let mut img = place.img;
 
-        let (info_ox, info_oy) = if anchor_full { (0, 0) } else { (place.off_x, place.off_y) };
         if let Some(font) = state.font.as_ref() {
             if info_box {
                 let mut lines = vec![
@@ -1286,16 +1292,16 @@ fn composite_frames(
                 if !src.range.is_empty() && src.range != info.range {
                     lines.push(format!("Levels: {}", range_label(&src.range)));
                 }
-                if let Some(l) = scale_label(params, disp_dims[s], target) {
+                if let Some(l) = scale_label(params, disp_dims[s], render_dims[k]) {
                     lines.push(l);
                 }
                 if let Some(l) = tonemap_note(&src.tonemap(info), info) {
                     lines.push(l);
                 }
-                pipeline::draw_info_box(&mut img, &lines, font, info_ox, info_oy, info_pos, info_mult);
+                pipeline::draw_info_box(&mut img, &lines, font, info_pos, info_mult);
             }
             if watermark {
-                pipeline::draw_watermark(&mut img, mark, font, info_ox, info_oy, wm_top);
+                pipeline::draw_watermark(&mut img, mark, font, wm_top);
             }
         }
 
@@ -1395,7 +1401,7 @@ pub async fn next_solid_frame(
     const BATCH: u64 = 12;
     let st = state.inner().clone();
     tauri::async_runtime::spawn_blocking(move || {
-        let (infos, _d, _c, _f, fits) = plan(&st, &params)?;
+        let (infos, _d, _c, fits) = plan(&st, &params)?;
         let end = params.sources.iter().map(|s| s.proj_len()).max().unwrap_or(0);
         let stop = (start + BATCH).min(end);
         let hits: Vec<(u64, usize, u64)> = (start..stop)
@@ -1504,7 +1510,7 @@ pub async fn render(
 ) -> Result<RenderOut, String> {
     let st = state.inner().clone();
     tauri::async_runtime::spawn_blocking(move || {
-        let (infos, disp_dims, canvas, fill, fits) = plan(&st, &params)?;
+        let (infos, disp_dims, canvas, fits) = plan(&st, &params)?;
         let n = params.sources.len();
         let sources: Vec<usize> = if req.sources.is_empty() {
             (0..n).collect()
@@ -1526,8 +1532,8 @@ pub async fn render(
 
         let produced: Vec<(RgbaImage, ImgMeta)> = if req.composite {
             composite_frames(
-                &st, &params, &infos, &disp_dims, canvas, fill, &sources, &frames, fetched,
-                req.info_box, req.watermark,
+                &st, &params, &infos, &disp_dims, &sources, &frames, fetched, req.info_box,
+                req.watermark,
             )
         } else {
             fetched
@@ -1623,8 +1629,7 @@ pub(crate) fn render_position(
     base: u64,
     overlay: Option<&String>,
 ) -> Result<Vec<RgbaImage>, String> {
-    let (infos, disp_dims, canvas, fill, fits) = plan(st, params)?;
-    let (cw, ch) = canvas;
+    let (infos, disp_dims, _canvas, fits) = plan(st, params)?;
     let n = params.sources.len();
     let sources: Vec<usize> = (0..n).collect();
     let frames: Vec<u64> = params
@@ -1633,25 +1638,21 @@ pub(crate) fn render_position(
         .map(|s| resolve_frame(s, Some(base), None))
         .collect::<Result<_, _>>()?;
     let fetched = request_frames(params, &infos, &fits, &sources, &frames, None)?;
-    let composited = composite_frames(
-        st, params, &infos, &disp_dims, canvas, fill, &sources, &frames, fetched, true, params.watermark,
-    );
+    // Each source is exported at its own aligned resolution (no shared-canvas padding); the viewer
+    // aligns them spatially, matching the preview.
+    let composited =
+        composite_frames(st, params, &infos, &disp_dims, &sources, &frames, fetched, true, params.watermark);
 
-    let ov = match overlay {
-        Some(data_url) => {
-            let mut ov = decode_overlay(data_url)?;
-            if ov.dimensions() != (cw, ch) {
-                ov = image::imageops::resize(&ov, cw, ch, image::imageops::FilterType::Triangle);
-            }
-            Some(ov)
-        }
-        None => None,
-    };
+    let ov_src = overlay.map(|d| decode_overlay(d)).transpose()?;
 
     let mut imgs = Vec::with_capacity(composited.len());
     for (mut img, _meta) in composited.into_iter() {
-        if let Some(ov) = &ov {
-            image::imageops::overlay(&mut img, ov, 0, 0);
+        if let Some(ov) = &ov_src {
+            let (iw, ih) = img.dimensions();
+            // The markup overlay is authored in the preview's box space; stretch it onto each
+            // frame's own size so it lands on the exported image. Bicubic (image crate's CatmullRom).
+            let ov = image::imageops::resize(ov, iw, ih, image::imageops::FilterType::CatmullRom);
+            image::imageops::overlay(&mut img, &ov, 0, 0);
         }
         imgs.push(img);
     }

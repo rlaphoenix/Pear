@@ -4,54 +4,17 @@ use ab_glyph::{Font, FontVec, PxScale, ScaleFont};
 use image::imageops::FilterType;
 use image::{Rgba, RgbaImage};
 
-/// Pad/crop alignment: off, or on with the canvas taking the largest or smallest source's aspect
-/// ratio. The reference is independent of the up/down-scale resolution choice, so a 4:3 source
-/// among 16:9 ones can be pillarboxed (Largest) or the 16:9 ones letterboxed (Smallest) at either
-/// resolution.
+/// How the up/down-scale resolution is chosen when sources differ in aspect ratio. The reference
+/// source's *raw* (pre-aspect-ratio) box sets the target; each source keeps its own display aspect
+/// ratio. `Height`/`Width` match that one dimension of the reference (so a wider source ends up
+/// wider/shorter than the reference); `Both` fits the source inside the reference box.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "lowercase")]
-pub enum SpatialAspect {
+pub enum ScaleMode {
+    Height,
+    Width,
     #[default]
-    Off,
-    Largest,
-    Smallest,
-}
-
-impl SpatialAspect {
-    pub fn is_on(self) -> bool {
-        self != SpatialAspect::Off
-    }
-}
-
-/// Deserialize a `SpatialAspect`, tolerating a legacy boolean from projects saved before this
-/// became a three-state field: `false` -> Off, `true` -> the reference that field used to imply.
-#[derive(serde::Deserialize)]
-#[serde(untagged)]
-enum AspectOrBool {
-    Bool(bool),
-    Aspect(SpatialAspect),
-}
-
-fn de_aspect<'de, D: serde::Deserializer<'de>>(
-    d: D,
-    on_true: SpatialAspect,
-) -> Result<SpatialAspect, D::Error> {
-    use serde::Deserialize;
-    Ok(match AspectOrBool::deserialize(d)? {
-        AspectOrBool::Bool(false) => SpatialAspect::Off,
-        AspectOrBool::Bool(true) => on_true,
-        AspectOrBool::Aspect(a) => a,
-    })
-}
-
-/// serde `deserialize_with` for a pad field (legacy `true` meant "pad to the largest source").
-pub fn de_pad<'de, D: serde::Deserializer<'de>>(d: D) -> Result<SpatialAspect, D::Error> {
-    de_aspect(d, SpatialAspect::Largest)
-}
-
-/// serde `deserialize_with` for a crop field (legacy `true` meant "crop to the smallest source").
-pub fn de_crop<'de, D: serde::Deserializer<'de>>(d: D) -> Result<SpatialAspect, D::Error> {
-    de_aspect(d, SpatialAspect::Smallest)
+    Both,
 }
 
 pub struct ScaleOpts {
@@ -59,19 +22,7 @@ pub struct ScaleOpts {
     pub up_algo: String,
     pub downscale: bool,
     pub down_algo: String,
-    pub crop_to_smallest: SpatialAspect,
-    pub pad_to_largest: SpatialAspect,
-}
-
-pub fn filter_from_name(name: &str) -> FilterType {
-    match name {
-        "Nearest" => FilterType::Nearest,
-        "Triangle" => FilterType::Triangle,
-        "CatmullRom" => FilterType::CatmullRom,
-        "Gaussian" => FilterType::Gaussian,
-        "Lanczos3" => FilterType::Lanczos3,
-        _ => FilterType::Triangle,
-    }
+    pub scale_mode: ScaleMode,
 }
 
 pub fn apply_crop(img: &RgbaImage, crop: Crop) -> RgbaImage {
@@ -96,30 +47,18 @@ fn fit_dims(d: (u32, u32), target: (u32, u32)) -> (u32, u32) {
     (((iw as f64 * s).round() as u32).max(1), ((ih as f64 * s).round() as u32).max(1))
 }
 
-/// Scale `d` (preserving aspect ratio) to *cover* `target` - the smallest it can be while still
-/// filling both target dimensions. Overflow is cropped. Result is >= target in both dimensions.
-fn cover_dims(d: (u32, u32), target: (u32, u32)) -> (u32, u32) {
-    let (iw, ih) = d;
-    if iw == target.0 && ih == target.1 {
-        return d;
+/// Scale a source's display dims toward the resolution reference's raw box, keeping the source's
+/// display aspect ratio. This is the final display size, so applying it as a single resize also
+/// realizes the source's aspect ratio (no separate DAR resize needed).
+fn scaled_disp(disp: (u32, u32), refbox: (u32, u32), mode: ScaleMode) -> (u32, u32) {
+    let (dw, dh) = disp;
+    let (rw, rh) = refbox;
+    let r = |x: f64| (x.round() as u32).max(1);
+    match mode {
+        ScaleMode::Height => (r(rh as f64 * dw as f64 / dh as f64), rh),
+        ScaleMode::Width => (rw, r(rw as f64 * dh as f64 / dw as f64)),
+        ScaleMode::Both => fit_dims(disp, refbox),
     }
-    let s = f64::max(target.0 as f64 / iw as f64, target.1 as f64 / ih as f64);
-    (((iw as f64 * s).round() as u32).max(target.0), ((ih as f64 * s).round() as u32).max(target.1))
-}
-
-fn center_on_canvas(img: &RgbaImage, tw: u32, th: u32, fill: Rgba<u8>) -> RgbaImage {
-    let mut canvas = RgbaImage::from_pixel(tw, th, fill);
-    let (iw, ih) = img.dimensions();
-    let x = ((tw as i64 - iw as i64) / 2).max(0);
-    let y = ((th as i64 - ih as i64) / 2).max(0);
-    image::imageops::overlay(&mut canvas, img, x, y);
-    canvas
-}
-
-pub struct Placed {
-    pub img: RgbaImage,
-    pub off_x: i32,
-    pub off_y: i32,
 }
 
 fn argmin(v: &[u64]) -> usize {
@@ -135,92 +74,84 @@ fn argmax(v: &[u64]) -> usize {
     idx
 }
 
-const TRANSPARENT: Rgba<u8> = Rgba([0, 0, 0, 0]);
-const BLACK: Rgba<u8> = Rgba([0, 0, 0, 255]);
-
-pub fn plan_sizes(dims: &[(u32, u32)], opts: &ScaleOpts) -> ((u32, u32), Rgba<u8>, Vec<Fit>) {
-    if dims.is_empty() {
-        return ((1, 1), TRANSPARENT, Vec::new());
+/// Plan how each source is scaled/cropped. `raw` is each source's pre-aspect-ratio (storage) dims,
+/// `disp` its display dims (aspect ratio applied); both are post-crop. Scale targets are computed
+/// against the reference source's *raw* box so the up/down scale choice happens before aspect-ratio
+/// application - the returned targets are display dims, so a single resize realizes both. The first
+/// tuple element is the bounding box of all scaled sources (the preview's reference canvas).
+pub fn plan_sizes(
+    raw: &[(u32, u32)],
+    disp: &[(u32, u32)],
+    opts: &ScaleOpts,
+) -> ((u32, u32), Vec<Fit>) {
+    if disp.is_empty() {
+        return ((1, 1), Vec::new());
     }
-    let areas: Vec<u64> = dims.iter().map(|&(w, h)| w as u64 * h as u64).collect();
-    let smallest = dims[argmin(&areas)];
-    let largest = dims[argmax(&areas)];
+    let areas: Vec<u64> = disp.iter().map(|&(w, h)| w as u64 * h as u64).collect();
+    let i_small = argmin(&areas);
+    let i_large = argmax(&areas);
 
-    // Resolution target, set by upscale/downscale: the box every source is scaled toward. It fixes
-    // the pixel scale of the output but NOT the canvas aspect ratio - that's the reference below.
-    let (algo, size_target) = if opts.upscale {
-        (opts.up_algo.as_str(), Some(largest))
+    // Resolution reference: the raw box of the largest (upscale) or smallest (downscale) source.
+    let (algo, ref_raw) = if opts.upscale {
+        (opts.up_algo.as_str(), Some(raw[i_large]))
     } else if opts.downscale {
-        (opts.down_algo.as_str(), Some(smallest))
+        (opts.down_algo.as_str(), Some(raw[i_small]))
     } else {
         ("", None)
     };
-    let mk_scale = |from: (u32, u32), to: (u32, u32)| {
-        (from != to).then(|| (to.0, to.1, algo.to_string()))
-    };
 
-    if opts.pad_to_largest.is_on() {
-        // Canvas = reference source's aspect ratio, sized to the resolution target. Each source is
-        // fit *inside* it (preserving AR) and centered on black - the reference fills, the rest get
-        // pillar/letterbox bars depending on their AR relative to the reference.
-        let r = if opts.pad_to_largest == SpatialAspect::Smallest { smallest } else { largest };
-        let canvas = size_target.map_or(r, |t| fit_dims(r, t));
-        let fits = dims
-            .iter()
-            .map(|&d| {
-                let scaled = size_target.map_or(d, |_| fit_dims(d, canvas));
-                Fit { scale: mk_scale(d, scaled), crop: None }
-            })
-            .collect();
-        (canvas, BLACK, fits)
-    } else if opts.crop_to_smallest.is_on() {
-        // Canvas = reference source's aspect ratio, sized to the resolution target. With scaling on,
-        // each source is scaled to *cover* the canvas then centre-cropped (fills edge-to-edge, trims
-        // overflow); with no scaling, it's a straight centre pixel-crop to the canvas.
-        let r = if opts.crop_to_smallest == SpatialAspect::Largest { largest } else { smallest };
-        let canvas = size_target.map_or(r, |t| fit_dims(r, t));
-        let fits = dims
-            .iter()
-            .map(|&d| {
-                let scaled = size_target.map_or(d, |_| cover_dims(d, canvas));
-                Fit {
-                    scale: mk_scale(d, scaled),
-                    crop: Some((canvas.0.min(scaled.0), canvas.1.min(scaled.1))),
-                }
-            })
-            .collect();
-        (canvas, TRANSPARENT, fits)
-    } else if let Some(t) = size_target {
-        // Scale only: fit each source into the target box and centre on the bounding box (transparent).
-        let scaled: Vec<(u32, u32)> = dims.iter().map(|&d| fit_dims(d, t)).collect();
-        let bbox = (
-            scaled.iter().map(|d| d.0).max().unwrap_or(1),
-            scaled.iter().map(|d| d.1).max().unwrap_or(1),
-        );
-        let fits = dims
-            .iter()
-            .zip(&scaled)
-            .map(|(&d, &sd)| Fit { scale: mk_scale(d, sd), crop: None })
-            .collect();
-        (bbox, TRANSPARENT, fits)
-    } else {
-        let bbox = (
-            dims.iter().map(|d| d.0).max().unwrap_or(1),
-            dims.iter().map(|d| d.1).max().unwrap_or(1),
-        );
-        (bbox, TRANSPARENT, dims.iter().map(|_| Fit::default()).collect())
-    }
+    // Scale each source toward the reference raw box (mode-aware), report the bounding box of the
+    // results. Sources of differing AR won't match resolution - intended; the viewer aligns them.
+    let scaled: Vec<(u32, u32)> = match ref_raw {
+        Some(rb) => disp.iter().map(|&d| scaled_disp(d, rb, opts.scale_mode)).collect(),
+        None => disp.to_vec(),
+    };
+    let bbox = (
+        scaled.iter().map(|d| d.0).max().unwrap_or(1),
+        scaled.iter().map(|d| d.1).max().unwrap_or(1),
+    );
+    let fits = disp
+        .iter()
+        .zip(&scaled)
+        .map(|(&d, &sd)| (d != sd).then(|| (sd.0, sd.1, algo.to_string())))
+        .collect();
+    (bbox, fits)
 }
 
-pub fn place_on_canvas(img: &RgbaImage, canvas: (u32, u32), fill: Rgba<u8>) -> Placed {
-    let (tw, th) = canvas;
-    let (iw, ih) = img.dimensions();
-    let off_x = ((tw as i64 - iw as i64) / 2).max(0) as i32;
-    let off_y = ((th as i64 - ih as i64) / 2).max(0) as i32;
-    Placed {
-        img: center_on_canvas(img, tw, th, fill),
-        off_x,
-        off_y,
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // 4:3 source (raw 720x480, display 640x480) + 16:9 source (raw 720x576, display 1024x576),
+    // downscaling toward the smallest (the 4:3). The 16:9 source's target depends on the mode.
+    fn plan(mode: ScaleMode) -> Vec<Fit> {
+        let raw = [(720, 480), (720, 576)];
+        let disp = [(640, 480), (1024, 576)];
+        let opts = ScaleOpts {
+            upscale: false,
+            up_algo: String::new(),
+            downscale: true,
+            down_algo: "Lanczos3".into(),
+            scale_mode: mode,
+        };
+        plan_sizes(&raw, &disp, &opts).1
+    }
+
+    fn target(f: &Fit) -> Option<(u32, u32)> {
+        f.as_ref().map(|&(w, h, _)| (w, h))
+    }
+
+    #[test]
+    fn scale_mode_targets() {
+        // Both: 16:9 fits inside the 720x480 raw box -> 720x405 (width-constrained here).
+        assert_eq!(target(&plan(ScaleMode::Both)[1]), Some((720, 405)));
+        // Height: match the reference height (480) -> 480*16/9 = 853.3 -> 853x480.
+        assert_eq!(target(&plan(ScaleMode::Height)[1]), Some((853, 480)));
+        // Width: match the reference width (720) -> 720x405.
+        assert_eq!(target(&plan(ScaleMode::Width)[1]), Some((720, 405)));
+        // The reference (4:3) is unchanged under Both/Height (its display is its own scale).
+        assert_eq!(target(&plan(ScaleMode::Both)[0]), None);
+        assert_eq!(target(&plan(ScaleMode::Height)[0]), None);
     }
 }
 
@@ -228,8 +159,6 @@ pub fn draw_info_box(
     img: &mut RgbaImage,
     lines: &[String],
     font: &FontVec,
-    ox: i32,
-    oy: i32,
     position: &str,
     scale_mult: f32,
 ) {
@@ -253,7 +182,7 @@ pub fn draw_info_box(
     let n = lines.len() as i32;
     let block_h = n * line_h + (n - 1).max(0) * spacing;
 
-    let (cx0, cy0, cx1, cy1) = (ox, oy, w as i32 - ox, h as i32 - oy);
+    let (cx0, cy0, cx1, cy1) = (0, 0, w as i32, h as i32);
     let (vpos, hpos) = position.split_once('-').unwrap_or(("top", "left"));
 
     let mut y = match vpos {
@@ -337,8 +266,6 @@ pub fn draw_watermark(
     img: &mut RgbaImage,
     text: &str,
     font: &FontVec,
-    ox: i32,
-    oy: i32,
     at_top: bool,
 ) {
     let (w, h) = img.dimensions();
@@ -362,12 +289,8 @@ pub fn draw_watermark(
     let gap = (size * 0.35).round().max(3.0) as i32;
     let total_w = tw + gap + emoji_w;
 
-    let x0 = w as i32 - ox - pad - total_w;
-    let y0 = if at_top {
-        oy + pad
-    } else {
-        h as i32 - oy - pad - th
-    };
+    let x0 = w as i32 - pad - total_w;
+    let y0 = if at_top { pad } else { h as i32 - pad - th };
 
     let sfont = font.as_scaled(scale);
     let line_h = (sfont.ascent() - sfont.descent()).ceil().max(th as f32) as u32 + 1;
