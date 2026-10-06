@@ -49,6 +49,10 @@ async function copyImageBlob(blob: Blob): Promise<boolean> {
 
 const clampUnit = (v: number) => Math.max(0, Math.min(1, v));
 
+// Keeps clicks on overlay controls from reaching the stage's pan/cycle handlers.
+const stop = (e: React.PointerEvent) => e.stopPropagation();
+const stopPtr = { onPointerDown: stop, onPointerUp: stop };
+
 const onDividerDown = (e: React.PointerEvent) => {
   e.stopPropagation();
   e.currentTarget.setPointerCapture(e.pointerId);
@@ -263,8 +267,7 @@ export function PreviewStage({
           </div>
           <div
             className={cn("absolute left-2 z-20 w-[42%] max-w-56", showViewOptions ? "bottom-11" : "bottom-2")}
-            onPointerDown={(e) => e.stopPropagation()}
-            onPointerUp={(e) => e.stopPropagation()}
+            {...stopPtr}
           >
             <Select
               value={String(juxLeft)}
@@ -275,8 +278,7 @@ export function PreviewStage({
           </div>
           <div
             className={cn("absolute right-2 z-20 w-[42%] max-w-56", showViewOptions ? "bottom-11" : "bottom-2")}
-            onPointerDown={(e) => e.stopPropagation()}
-            onPointerUp={(e) => e.stopPropagation()}
+            {...stopPtr}
           >
             <Select
               value={String(juxRight)}
@@ -291,8 +293,7 @@ export function PreviewStage({
       {comparison && showViewOptions && (
         <div
           className="absolute left-2 top-2 z-20 flex items-center gap-1.5"
-          onPointerDown={(e) => e.stopPropagation()}
-          onPointerUp={(e) => e.stopPropagation()}
+          {...stopPtr}
         >
           <Select<ScaleChoice>
             value={scaleChoice}
@@ -311,23 +312,19 @@ export function PreviewStage({
         </div>
       )}
 
-      <div className="absolute right-2 top-2 z-20 flex items-center gap-2">
+      <div className="absolute right-2 top-2 z-20 flex items-center gap-2" {...stopPtr}>
         {comparison && showViewOptions && (
-          <div onPointerDown={(e) => e.stopPropagation()} onPointerUp={(e) => e.stopPropagation()}>
-            <Select
-              value={canvasMode}
-              options={canvasModeOptions}
-              onValueChange={setCanvasMode}
-              className="h-7 w-[104px] bg-black/70 text-[11px]"
-            />
-          </div>
+          <Select
+            value={canvasMode}
+            options={canvasModeOptions}
+            onValueChange={setCanvasMode}
+            className="h-7 w-[104px] bg-black/70 text-[11px]"
+          />
         )}
         {comparison && (
           <button
             type="button"
             onClick={zoom.reset}
-            onPointerDown={(e) => e.stopPropagation()}
-            onPointerUp={(e) => e.stopPropagation()}
             title="Reset zoom (fit)"
             className="flex h-7 cursor-pointer items-center bg-black/60 px-2 font-mono text-[11px] tabular-nums text-white/90 outline-none hover:bg-black/80"
           >
@@ -337,8 +334,6 @@ export function PreviewStage({
         <button
           type="button"
           onClick={() => setFullscreen((f) => !f)}
-          onPointerDown={(e) => e.stopPropagation()}
-          onPointerUp={(e) => e.stopPropagation()}
           title={fullscreen ? "Exit fullscreen (Esc)" : "Fullscreen"}
           className="flex size-7 cursor-pointer items-center justify-center bg-black/60 text-white/90 outline-none hover:bg-black/80"
         >
@@ -360,8 +355,7 @@ export function PreviewStage({
             <button
               type="button"
               onClick={onAddClick}
-              onPointerDown={(e) => e.stopPropagation()}
-              onPointerUp={(e) => e.stopPropagation()}
+              {...stopPtr}
               title="Add this frame as a comparison (Export tab)"
               className="flex size-7 cursor-pointer items-center justify-center bg-black/60 text-white/90 outline-none hover:bg-black/80"
             >
@@ -371,8 +365,7 @@ export function PreviewStage({
           <button
             type="button"
             onClick={onCopyFrame}
-            onPointerDown={(e) => e.stopPropagation()}
-            onPointerUp={(e) => e.stopPropagation()}
+            {...stopPtr}
             title="Copy this frame (full resolution, with info box)"
             className="flex size-7 cursor-pointer items-center justify-center bg-black/60 text-white/90 outline-none hover:bg-black/80"
           >
@@ -384,8 +377,7 @@ export function PreviewStage({
       {comparison && showViewOptions && (
         <div
           className="absolute bottom-2 left-2 z-20 flex items-center gap-1.5"
-          onPointerDown={(e) => e.stopPropagation()}
-          onPointerUp={(e) => e.stopPropagation()}
+          {...stopPtr}
         >
           <Select
             value={fillMode}
