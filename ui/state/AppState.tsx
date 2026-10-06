@@ -261,7 +261,8 @@ function useSettings() {
           marginEnd: prefs.margin?.end ?? 0.02,
           match: kindToMatch(prefs.match),
           orderedComparisons: prefs.orderedComparisons ?? false,
-          defaultZoom: prefs.defaultZoom ?? "fit",
+          // defaultZoom now holds a canvas mode; the legacy "actual" maps to native ("none").
+          defaultZoom: prefs.defaultZoom === "actual" ? "none" : prefs.defaultZoom ?? "fit",
           pixelPerfect: prefs.pixelPerfect ?? false,
           zoomAlgo: prefs.zoomAlgo ?? "auto",
           fullscreenMode: prefs.fullscreenMode ?? "fullscreen",

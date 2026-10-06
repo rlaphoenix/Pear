@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import type { CanvasMode } from "@/lib/preview";
 
 export type DataUrl = string;
 export type SourcePath = string;
@@ -437,7 +438,6 @@ export interface FileId {
   id: string;
 }
 
-export type ZoomMode = "fit" | "actual";
 type FullscreenMode = "windowed" | "maximized" | "fullscreen";
 
 export interface FullscreenIncludes {
@@ -496,7 +496,8 @@ export interface Prefs {
   margin: MarginOpt;
   match: MatchKind;
   orderedComparisons: boolean;
-  defaultZoom: ZoomMode;
+  // Stored value may be the legacy "actual"; normalized to a canvas mode on load.
+  defaultZoom: CanvasMode | "actual";
   pixelPerfect: boolean;
   zoomAlgo: ZoomAlgo;
   fullscreenMode: FullscreenMode;
@@ -531,7 +532,7 @@ export interface AppSettings {
   marginEnd: number;
   match: FrameMatch;
   orderedComparisons: boolean;
-  defaultZoom: ZoomMode;
+  defaultZoom: CanvasMode;
   pixelPerfect: boolean;
   zoomAlgo: ZoomAlgo;
   fullscreenMode: FullscreenMode;

@@ -23,24 +23,6 @@ export function ScalingSection({ draft, setDraft }: SectionProps) {
     <section className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
         <div className="flex flex-col gap-0.5">
-          <span className="text-sm text-foreground/90">Preview Size</span>
-          <span className="text-xs text-muted-foreground">
-            How a comparison is first sized. Click the zoom % on the image to flip between
-            100% and fit at any time.
-          </span>
-        </div>
-        <Segmented
-          value={draft.defaultZoom}
-          options={[
-            ["fit", "Fit to window"],
-            ["actual", "Actual size (100%)"],
-          ]}
-          onChange={(v) => setDraft((d) => ({ ...d, defaultZoom: v }))}
-        />
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <div className="flex flex-col gap-0.5">
           <span className="text-sm text-foreground/90">Zoom algorithm</span>
           <span className="text-xs text-muted-foreground">
             How the preview is rendered when zoomed on screen (CSS

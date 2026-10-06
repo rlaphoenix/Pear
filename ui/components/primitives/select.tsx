@@ -12,7 +12,7 @@ interface SelectOption<T extends string> {
 interface SelectProps<T extends string> {
   value: T;
   onValueChange: (value: T) => void;
-  options: SelectOption<T>[];
+  options: readonly SelectOption<T>[];
   className?: string;
   disabled?: boolean;
 }

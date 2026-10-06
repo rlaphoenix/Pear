@@ -3,6 +3,17 @@ import type { PreviewBg, PreviewBorder, ZoomAlgo } from "@/lib/tauri";
 
 export type PreviewMode = "single" | "split" | "juxtapose" | "weave";
 
+// Visual-only display controls, modelled on slow.pics. They change how the composited frame is
+// shown in the preview - never the actual image data.
+// - CanvasMode sets the base fit the viewport resets to (wheel-zoom/pan still layer on top).
+export const canvasModeOptions = [
+  { value: "fit", label: "Fit" },
+  { value: "none", label: "Native size" },
+  { value: "fit-width", label: "Fill width" },
+  { value: "fit-height", label: "Fill height" },
+] as const;
+export type CanvasMode = (typeof canvasModeOptions)[number]["value"];
+
 // Spatial scaling: which source (if any) every source is scaled toward, and how the resolution is
 // chosen. Backed by the upscaleSmallest/downscaleLargest booleans + scaleMode project settings.
 export const scaleOptions = [

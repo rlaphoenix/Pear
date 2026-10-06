@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import type { ZoomMode } from "@/lib/tauri";
+import type { CanvasMode } from "@/lib/preview";
 
 const TRANSITION = "transform 200ms cubic-bezier(0.22, 1, 0.36, 1)";
 
@@ -18,12 +18,10 @@ const ppNearest = (z: number) =>
   z >= 1 ? Math.max(0, Math.round(z) - 1) : -(Math.round(1 / z) - 1);
 const ppFloor = (z: number) => (z >= 1 ? Math.floor(z) : 1 / Math.ceil(1 / z));
 
-export type { ZoomMode };
-
 export function useZoom(
   contentW: number,
   contentH: number,
-  defaultMode: ZoomMode = "fit",
+  defaultMode: CanvasMode = "fit",
   pixelPerfect = false,
   fullscreen = false,
   bands = 1,
@@ -40,7 +38,7 @@ export function useZoom(
   const modeRef = useRef(defaultMode);
   const bandsRef = useRef(bands);
   const ppRef = useRef(pixelPerfect);
-  const followFit = useRef(defaultMode === "fit");
+  const followFit = useRef(defaultMode !== "none");
   const refitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const immediateRefit = useRef(false);
   const immediateTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -78,6 +76,9 @@ export function useZoom(
     const { W, H } = stage();
     const { w, h } = content.current;
     if (!W || !H || !w || !h) return 1;
+    // "fit-width"/"fit-height" match that one viewport dimension; everything else fits both.
+    if (modeRef.current === "fit-width") return W / w;
+    if (modeRef.current === "fit-height") return H / h;
     return Math.min(W / w, H / h);
   };
   const minZoom = () => Math.min(MIN_OUT, fitZoom());
@@ -110,7 +111,7 @@ export function useZoom(
     followFit.current = false;
   };
 
-  const applyDefault = () => (modeRef.current === "actual" ? applyActual() : applyFit());
+  const applyDefault = () => (modeRef.current === "none" ? applyActual() : applyFit());
 
   const tryFit = useCallback(() => {
     const el = elRef.current;
@@ -126,6 +127,12 @@ export function useZoom(
     setAnimate(false);
     tryFit();
   }, [contentW, contentH, bands, tryFit]);
+
+  // Re-apply the base fit when the canvas mode changes (unless we haven't done the first fit yet).
+  useEffect(() => {
+    if (!needsFit.current) applyDefault();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [defaultMode]);
 
   const setViewportRef = useCallback(
     (el: HTMLElement | null) => {
@@ -251,9 +258,9 @@ export function useZoom(
     return m;
   }, []);
 
-  const toggle = useCallback(() => {
-    if (Math.abs(viewRef.current.zoom - 1) < 0.001) applyFit();
-    else applyActual();
+  // Reset the view to the base fit chosen by the canvas-mode dropdown.
+  const reset = useCallback(() => {
+    applyDefault();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -275,7 +282,7 @@ export function useZoom(
     onPointerMove,
     onPointerUp,
     consumeDrag,
-    toggle,
+    reset,
   };
 }
 

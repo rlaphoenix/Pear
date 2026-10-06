@@ -7,6 +7,7 @@ import {
   previewBgStyle,
   previewBorderStyle,
   zoomCss,
+  canvasModeOptions,
   scaleOptions,
   scaleModeOptions,
   type PreviewMode,
@@ -66,10 +67,14 @@ export function PreviewStage({
   children,
   showViewOptions = false,
 }: Props) {
-  const { appSettings } = useAppSettings();
+  const { appSettings, saveAppSettings } = useAppSettings();
   const { zoomAlgo, previewBg, previewBorder } = appSettings;
   const { settings, patch } = useProject();
   const { juxLeft, juxRight, setJuxLeft, setJuxRight, fullscreen, setFullscreen } = usePreview();
+  // Visual-only: canvas mode is the app-level defaultZoom preference.
+  const canvasMode = appSettings.defaultZoom;
+  const setCanvasMode = (v: typeof canvasMode) =>
+    void saveAppSettings({ ...appSettings, defaultZoom: v });
   // Spatial scaling (project settings): one of the two enable flags at a time, plus the mode.
   const scaleChoice: ScaleChoice = settings.upscaleSmallest
     ? "upscale"
@@ -302,13 +307,23 @@ export function PreviewStage({
       )}
 
       <div className="absolute right-2 top-2 z-20 flex items-center gap-2">
+        {comparison && showViewOptions && (
+          <div onPointerDown={(e) => e.stopPropagation()} onPointerUp={(e) => e.stopPropagation()}>
+            <Select
+              value={canvasMode}
+              options={canvasModeOptions}
+              onValueChange={setCanvasMode}
+              className="h-7 w-[104px] bg-black/70 text-[11px]"
+            />
+          </div>
+        )}
         {comparison && (
           <button
             type="button"
-            onClick={zoom.toggle}
+            onClick={zoom.reset}
             onPointerDown={(e) => e.stopPropagation()}
             onPointerUp={(e) => e.stopPropagation()}
-            title="Click: 100% (native) · click again: fit to window"
+            title="Reset zoom (fit)"
             className="flex h-7 cursor-pointer items-center bg-black/60 px-2 font-mono text-[11px] tabular-nums text-white/90 outline-none hover:bg-black/80"
           >
             {zoom.percent}%
