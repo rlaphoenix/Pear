@@ -26,7 +26,7 @@ const SECTIONS = [
   { id: "general", label: "General" },
   { id: "decoding", label: "Decoding" },
   { id: "export", label: "Export" },
-  { id: "scaling", label: "Scaling" },
+  { id: "algorithms", label: "Algorithms" },
   { id: "background", label: "Previewer" },
   { id: "fullscreen", label: "Fullscreen" },
   { id: "infobox", label: "Info Box" },
@@ -106,7 +106,7 @@ export function SettingsModal({ settings, onSave, onClose }: Props) {
         <div className="min-w-0 flex-1 overflow-y-auto p-4">
         {active === "decoding" && <DecodingSection draft={draft} setDraft={setDraft} />}
         {active === "export" && <ExportSection draft={draft} setDraft={setDraft} />}
-        {active === "scaling" && <ScalingSection draft={draft} setDraft={setDraft} />}
+        {active === "algorithms" && <ScalingSection draft={draft} setDraft={setDraft} />}
         {active === "background" && <PreviewerSection draft={draft} setDraft={setDraft} />}
         {active === "fullscreen" && <FullscreenSection draft={draft} setDraft={setDraft} />}
         {active === "infobox" && <InfoBoxSection draft={draft} setDraft={setDraft} />}
