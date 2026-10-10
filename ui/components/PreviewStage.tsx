@@ -292,7 +292,7 @@ export function PreviewStage({
 
       {comparison && showViewOptions && (
         <div
-          className="absolute left-2 top-2 z-20 flex items-center gap-1.5"
+          className="absolute bottom-2 right-2 z-20 flex items-center gap-1.5"
           {...stopPtr}
         >
           <Select<ScaleChoice>
@@ -342,7 +342,7 @@ export function PreviewStage({
       </div>
 
       {comparison && (
-        <div className="absolute bottom-2 right-2 z-20 flex items-center gap-2">
+        <div className="absolute left-2 top-2 z-20 flex items-center gap-2">
           {frameInfo.map((p, i) => (
             <span
               key={i}
