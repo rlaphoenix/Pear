@@ -960,6 +960,16 @@ fn apply_tempo_info(info: &mut SourceInfo, tempo: &vapoursynth::Tempo) {
     info.duration = if info.fps > 0.0 { total as f64 / info.fps } else { 0.0 };
 }
 
+// Containers with millisecond timestamps (MKV) round each frame's duration, so a 23.976 clip
+// reads 23.81/24.39 frame to frame. Within 1ms of the clip rate is rounding, not real VFR.
+fn display_fps(frame_fps: f64, clip_fps: f64) -> f64 {
+    if frame_fps > 0.0 && clip_fps > 0.0 && (1.0 / frame_fps - 1.0 / clip_fps).abs() < 0.001 {
+        clip_fps
+    } else {
+        frame_fps
+    }
+}
+
 fn fmt_timestamp(secs: f64) -> String {
     let total_ms = (secs * 1000.0).round().max(0.0) as u64;
     let ms = total_ms % 1000;
@@ -1316,7 +1326,7 @@ fn composite_frames(
             render_w: render_dims[k].0,
             render_h: render_dims[k].1,
             fmt: vs_meta[k].fmt.clone(),
-            fps: vs_meta[k].fps,
+            fps: display_fps(vs_meta[k].fps, info.fps),
         };
         out.push((img, meta));
     }
@@ -1553,7 +1563,7 @@ pub async fn render(
                         render_w: w,
                         render_h: h,
                         fmt: fmeta.fmt,
-                        fps: fmeta.fps,
+                        fps: display_fps(fmeta.fps, infos[s].fps),
                     };
                     (img, meta)
                 })
@@ -1863,5 +1873,15 @@ mod tests {
         // put a bright pixel where the stride will land it (index 16 -> x=16)
         varied.put_pixel(16, 0, Rgba([255, 255, 255, 255]));
         assert!(!is_solid(&varied, 8));
+    }
+
+    #[test]
+    fn display_fps_ignores_ms_rounding_but_keeps_vfr() {
+        use super::display_fps;
+        let clip = 24000.0 / 1001.0;
+        assert_eq!(display_fps(1000.0 / 42.0, clip), clip);
+        assert_eq!(display_fps(1000.0 / 41.0, clip), clip);
+        assert_eq!(display_fps(30000.0 / 1001.0, clip), 30000.0 / 1001.0);
+        assert_eq!(display_fps(0.0, clip), 0.0);
     }
 }
