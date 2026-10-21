@@ -45,6 +45,6 @@
     "dotenv-cli": "^11.0.0",
     "tailwindcss": "^4.0.9",
     "typescript": "^5.7.3",
-    "vite": "^8.2.1"
+    "vite": "^8.3.4"
   }
 }
